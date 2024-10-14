@@ -1,0 +1,2 @@
+blue=empty: 11.3 micron, 8-5-16_height, 10 mm spacing
+red=filled: 13.3 micron, 6-23-16-03_height, 10.36 mm spacing

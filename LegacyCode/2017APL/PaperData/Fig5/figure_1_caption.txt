@@ -1,0 +1,5 @@
+Blue=empty: radius = 11.3 micron, plate spacing = 10 mm, dataset = 8-5-16
+Red=filled: radius = 13.3 micron, plate spacing = 10.36 mm, dataset = 6-23-16-03
+
+--- line: Free particle limit = 16*sqrt(pi)/15
+Solid line: takata fit, valid in regions shown
