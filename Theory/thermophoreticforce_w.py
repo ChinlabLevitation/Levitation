@@ -5,9 +5,16 @@ import math
 
 molecMassAir = 4.81 * 10**-26
 boltzmannConstant = 1.38065 * 10**-23
-particleRadius = 13.3 * 10**-6
-averagePressure = 3.5 * 133.322
-particleWeight = (4 * math.pi / 3) * particleRadius**3 * 998 * 9.81
+
+averagePressure = 10 * 133.322
+particleRadius = 13e-6
+particleDensity = 917
+
+particleWeight = (4 * math.pi / 3) * particleRadius**3 * particleDensity * 9.81
+
+top_temp = 77
+bottom_temp = 300.65
+
 a = 0.00014
 b = 0.91823
 
@@ -34,13 +41,13 @@ def odes(z, y):
 
 
 def bc(ya, yb):
-    return np.array([ya[0] - 293, yb[0] - 77])
+    return np.array([ya[0] - bottom_temp, yb[0] - top_temp])
 
 
 z = np.linspace(0, 0.01, 1000)
 dz = z[1] - z[0]
 
-T_guess = np.linspace(293, 77, z.size)
+T_guess = np.linspace(bottom_temp, top_temp, z.size)
 dTdz_guess = np.gradient(T_guess, z)
 y_guess = np.vstack((T_guess, dTdz_guess))
 
@@ -51,8 +58,8 @@ T = np.array(solution.sol(z)[0])
 
 grad_T = (T[1:] - T[:-1])/dz
 
-plt.scatter(z[:-1], f_T(averagePressure, T[:-1], particleRadius))
-plt.show()
+# plt.scatter(z[:-1], f_T(averagePressure, T[:-1], particleRadius))
+# plt.show()
 
 F = -f_T(averagePressure, T[:-1], particleRadius) * (a * T[:-1]**b) * particleRadius**2/np.sqrt(2 * boltzmannConstant * T[:-1]/molecMassAir) * grad_T
 mg = np.ones(np.shape(z[:-1])) * particleWeight
@@ -68,7 +75,7 @@ plt.ylabel('Function values')
 plt.title('Multiple Lines Example')
 plt.legend()
 plt.grid(True)
-# plt.show()
+plt.show()
 
 
 
