@@ -166,7 +166,6 @@ grad_T = gradient(values=fullT, dr=dr, dz=dz)
 
 
 
-
 molecMassAir = 4.81 * 10**-26
 boltzmannConstant = 1.38065 * 10**-23
 
