@@ -44,7 +44,7 @@ def bc(ya, yb):
     return np.array([ya[0] - bottom_temp, yb[0] - top_temp])
 
 
-z = np.linspace(0, 0.01, 1000)
+z = np.linspace(0, 0.005, 1000)
 dz = z[1] - z[0]
 
 T_guess = np.linspace(bottom_temp, top_temp, z.size)

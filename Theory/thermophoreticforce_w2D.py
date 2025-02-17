@@ -7,7 +7,7 @@ import math
 mpl.rcParams.update(mpl.rcParamsDefault)
 from tqdm import tqdm           # optional; a nice way to show a progress bar for long loops
 
-from Finite_Difference_Operations import r_partial, z_partial, gradient
+from Finite_Difference_Operations import gradient
 
 
 # for a really useful reference see https://levelup.gitconnected.com/solving-2d-heat-equation-numerically-using-python-3334004aa01a
@@ -30,20 +30,20 @@ def kair(T_):
 # temperatures in K
 bucket_temp = 77                # top bucket (liquid nitrogen)
 plate_temp = 302                # bottom plate (hot plate)
-boundary_temp = 295             # boundary temperature (room temperature)
+boundary_temp = 290             # boundary temperature (room temperature)
 
 
-# geometry of the system in inches
-bucket_radius = 0.007           # radius of the top plate
-plate_radius = 0.01             # radius of the bottom plate
+# geometry of the system in meters
+bucket_radius = 0.017           # radius of the top plate
+plate_radius = 0.02             # radius of the bottom plate
 plate_height = 0.01             # height of the bottom plate
 separation_height = 0.01        # separation between the top bucket and the bottom plate
-simulation_radius = 0.02        # radius of the simulation
+simulation_radius = 0.03        # radius of the simulation
 simulation_height = 0.03        # height of the simulation
 
 
 # define the number of grid points
-Nr = 200                        # number of grid points in the radial direction
+Nr = 300                        # number of grid points in the radial direction
 Nz = 300                        # number of grid points in the axial direction
 
 
@@ -89,7 +89,7 @@ dzadd = np.zeros((Nr, Nz))
 dzsub = np.zeros((Nr, Nz))
 
 # define the number of iterations to perform
-iterations = 10000              # number of iterations to perform
+iterations = 30000              # number of iterations to perform
 
 # start the simulation
 for t in tqdm(range(iterations)):
@@ -163,7 +163,7 @@ molecMassAir = 4.81 * 10**-26
 boltzmannConstant = 1.38065 * 10**-23
 
 averagePressure = 5 * 133.322
-particleRadius = 18.3e-6
+particleRadius = 15e-6
 particleDensity = 917
 
 particleWeight = (4 * math.pi / 3) * particleRadius**3 * particleDensity * 9.81
