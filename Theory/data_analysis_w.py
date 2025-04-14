@@ -52,8 +52,8 @@ u_width_values_n = [a / b for a, b in zip(u_width_values_n, distance_between_pla
 
 
 
-plt.scatter(pressure_values[9:] + pressure_values_n, thickness_values[9:] + thickness_values_n)
+plt.scatter(pressure_values[9:] + pressure_values_n, u_width_values[9:] + u_width_values_n)
 plt.grid(True)
 plt.xlabel("Pressure")
-plt.ylabel("Thickness")
+plt.ylabel("Upper Width")
 plt.show()
