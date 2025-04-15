@@ -8,7 +8,6 @@ from tqdm import tqdm           # optional; a nice way to show a progress bar fo
 
 
 
-
 target_height = 0.007           # target height from bottom plate (meters)
 target_temp = 210               # target temperature (Kelvin)
 target = 'height'
