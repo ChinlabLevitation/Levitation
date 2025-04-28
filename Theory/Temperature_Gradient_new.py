@@ -8,22 +8,26 @@ mpl.rcParams.update(mpl.rcParamsDefault)
 from tqdm import tqdm           # optional; a nice way to show a progress bar for long loops
 
 
-
 # Load data
 df = pd.read_csv('Ice Levitation Data(Line Data - Nathan).csv')
 time_stamp = df.iloc[74:88, 2].to_numpy()
 pressure_data = df.iloc[74:88, 3].astype(float).to_numpy()
-bottom_plate_temperature_data = df.iloc[74:88, 4].astype(float).to_numpy()
-bottom_plate_temperature_data_unique_sorted = np.sort(np.unique(bottom_plate_temperature_data))
-height_ice_data = df.iloc[74:88, 26].astype(float).to_numpy()
-height_data = df.iloc[74:88, 15].astype(float).to_numpy()
-height_err = 0.005
+bottom_plate_temperature_data = df.iloc[74:88, 4].astype(float).to_numpy() + 273.15
+height_ice_data = df.iloc[74:88, 26].astype(float).to_numpy()/100
+height_data = df.iloc[74:88, 15].astype(float).to_numpy()/100
+height_err = 0.0005
 
 
+
+target = 'temperature'          # 'height' or 'temperature'
 target_height = 0.007           # target height from bottom plate (meters)
-target_temp = 210               # target temperature (Kelvin)
-target = 'height'               # 'height' or 'temperature'
-iterate_through_temps = False
+target_temp = 190               # target temperature (Kelvin)
+
+iterate_through_temps = True
+number_of_temps = 7
+start_temp = 293
+end_temp = 373
+
 use_data = True
 
 
@@ -32,18 +36,20 @@ top_plate_temp = 77             # top bucket (liquid nitrogen)
 bottom_plate_temp = 300         # bottom plate (hot plate)
 boundary_temp = 290             # boundary temperature (room temperature)
 
-if iterate_through_temps:
-    if use_data:
-        bottom_plate_temps = bottom_plate_temperature_data_unique_sorted
-    else:
-        bottom_plate_temps = np.linspace(293, 373, 5)
-else:
-    bottom_plate_temps = np.array([bottom_plate_temp])
 
-
-show_temp_distribution = True
+show_temp_distribution = False
 show_temp_slice = True
 
+
+
+
+if iterate_through_temps:
+    if use_data:
+        bottom_plate_temps = np.linspace(np.min(bottom_plate_temperature_data), np.max(bottom_plate_temperature_data), number_of_temps)
+    else:
+        bottom_plate_temps = np.linspace(start_temp, end_temp, number_of_temps)
+else:
+    bottom_plate_temps = np.array([bottom_plate_temp])
 
 
 ## define physical constants and simulation parameters ##
@@ -62,25 +68,25 @@ def kair(T_):
 
 
 # geometry of the system in meters
-bucket_radius = 0.017           # radius of the top plate
-plate_radius = 0.02             # radius of the bottom plate
-bottom_plate_height = 0.01      # height of the bottom plate
-separation_height = 0.01        # separation between the top bucket and the bottom plate
-simulation_radius = 0.03        # radius of the simulation
-simulation_height = 0.03        # height of the simulation
+bucket_radius = 0.017               # radius of the top plate
+plate_radius = 0.02                 # radius of the bottom plate
+bottom_plate_height = 0.01          # height of the bottom plate
+separation_height = 0.01            # separation between the top bucket and the bottom plate
+simulation_radius = 0.03            # radius of the simulation
+simulation_height = 0.03            # height of the simulation
 
 
 # define the number of grid points
-Nr = 300                        # number of grid points in the radial direction
-Nz = 300                        # number of grid points in the axial direction
+Nr = 300                            # number of grid points in the radial direction
+Nz = 300                            # number of grid points in the axial direction
 
 
 ##### no need to change anything below this line #####
 
 
 # compute the grid spacing
-dr = simulation_radius / Nr     # grid spacing in the radial direction
-dz = simulation_height / Nz     # grid spacing in the axial direction
+dr = simulation_radius / (Nr - 1)     # grid spacing in the radial direction
+dz = simulation_height / (Nz - 1)     # grid spacing in the axial direction
 
 # set up the grid
 r = np.linspace(0, simulation_radius, Nr)
@@ -97,18 +103,11 @@ k = np.zeros((Nr, Nz))          # thermal conductivity
 # set up "masks", which are arrays that are 1 where a condition is true and 0 where it is false
 # these masks will be used to apply boundary conditions and to define the regions of the system
 # replaces the "thermal conductivity" and "boundary_condition" functions from the old code
-plate_mask = np.logical_and(R < plate_radius, Z < bottom_plate_height)
-bucket_mask = np.logical_and(R < bucket_radius, Z > separation_height + bottom_plate_height)
-air_mask = np.logical_not(np.logical_or(plate_mask, bucket_mask))
-boundary_mask = R == simulation_radius
+plate_mask = (R < plate_radius) & (Z < bottom_plate_height)
+bucket_mask = (R < bucket_radius) & (Z > separation_height + bottom_plate_height)
+air_mask = ~(plate_mask | bucket_mask)
+boundary_mask = np.isclose(R, r[-1]) | (np.isclose(Z, z[0]) & (~plate_mask)) | (np.isclose(Z, z[-1]) & (~bucket_mask))
 
-# set up the initial temperature distribution
-T[:, :] = boundary_temp
-
-# set up the initial thermal conductivity
-k[plate_mask] = kcopper
-k[bucket_mask] = ksteel
-k[air_mask] = kair(T[air_mask])
 
 # initialize various variables
 dradd = np.zeros((Nr, Nz))
@@ -116,17 +115,22 @@ drsub = np.zeros((Nr, Nz))
 dzadd = np.zeros((Nr, Nz))
 dzsub = np.zeros((Nr, Nz))
 
+
 # define the number of iterations to perform
 iterations = 20000              # number of iterations to perform
+
 
 # start the simulation
 T_s = []
 for temp in bottom_plate_temps:
+    T = np.full((Nr, Nz), boundary_temp)
+
+    # apply boundary conditions
+    T[boundary_mask] = boundary_temp
+    T[plate_mask] = temp
+    T[bucket_mask] = top_plate_temp
+
     for i in tqdm(range(iterations)):
-        # apply boundary conditions
-        T[boundary_mask] = boundary_temp
-        T[plate_mask] = temp
-        T[bucket_mask] = top_plate_temp
 
         # compute thermal conductivity
         k = kair(T)
@@ -153,7 +157,8 @@ for temp in bottom_plate_temps:
         T[plate_mask] = temp
         T[bucket_mask] = top_plate_temp
 
-    T_s.append(T)
+
+    T_s.append(T.copy())
 
 
 if show_temp_distribution and not iterate_through_temps:
@@ -205,22 +210,24 @@ if show_temp_slice and not iterate_through_temps and target == 'temperature':
 heights_at_temp = []
 temps_at_height = []
 
-for slice_ in center_slices:
-    if target == 'height':
-        interp_func = interp1d(slice_, z_slice, kind='cubic', fill_value="extrapolate")
+for temp_slice in center_slices:
+    if target == 'temperature':
+        order = np.argsort(temp_slice)
+        interp_func = interp1d(temp_slice[order], z_slice[order], kind='cubic',bounds_error=False, fill_value="extrapolate")
         heights_at_temp.append(interp_func(target_temp))
     else:
-        interp_func = interp1d(z_slice, slice_, kind='cubic', fill_value="extrapolate")
+        order = np.argsort(z_slice)
+        interp_func = interp1d(z_slice[order], temp_slice[order], kind='cubic', bounds_error=False,fill_value="extrapolate")
         temps_at_height.append(interp_func(target_height))
 
 
-#Plot height vs bottom plate temperature of an isotherm
-if show_temp_slice and iterate_through_temps and target == 'height':
+#Plot temperature vs bottom plate temperature of an isotherm
+if show_temp_slice and iterate_through_temps and target == 'temperature':
     plt.figure(figsize=(8, 5))
     plt.plot(bottom_plate_temps, np.array(heights_at_temp), 'b-', label=f'{target_temp:.2f}K Isotherm')
     if use_data:
-        plt.errorbar(bottom_plate_temps, height_data, xerr=0, yerr=height_err, fmt='o', capsize=3, label='Data Points')
-    plt.xlabel('Bottom Plate Temperature $T$ (K)')
+        plt.errorbar(bottom_plate_temperature_data, height_data, xerr=0, yerr=height_err, fmt='o', capsize=3, label='Data Points')
+    plt.xlabel('Bottom Plate Temperature (K)')
     plt.ylabel('Height $z$ (m)')
     plt.title('Height vs Bottom Plate Temperature of Isotherm')
     plt.grid(True)
@@ -228,25 +235,14 @@ if show_temp_slice and iterate_through_temps and target == 'height':
     plt.show()
 
 
-#Plot temperature vs bottom plate temperature of an isotherm
-if show_temp_slice and iterate_through_temps and target == 'temperature':
+#Plot height vs bottom plate temperature of an isoheight
+if show_temp_slice and iterate_through_temps and target == 'height':
     plt.figure(figsize=(8, 5))
     plt.plot(bottom_plate_temps, np.array(temps_at_height), 'b-', label=f'{target_height:.2f}m Isoheight')
-    plt.xlabel('Bottom Plate Temperature $T$ (K)')
-    plt.ylabel('Temperature $z$ (m)')
-    plt.title('Height vs Bottom Plate Temperature of Isotherm')
+    plt.xlabel('Bottom Plate Temperature (K)')
+    plt.ylabel('Temperature $T$ (K)')
+    plt.title('Temperature vs Bottom Plate Temperature of Isotherm')
     plt.grid(True)
     plt.legend()
     plt.show()
-
-
-
-
-
-
-
-
-
-
-
 
