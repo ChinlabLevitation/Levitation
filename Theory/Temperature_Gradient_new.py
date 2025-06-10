@@ -8,27 +8,41 @@ mpl.rcParams.update(mpl.rcParamsDefault)
 from tqdm import tqdm           # optional; a nice way to show a progress bar for long loops
 
 
-# Load data
-df = pd.read_csv('Ice Levitation Data(Line Data - Nathan).csv')
-time_stamp = df.iloc[74:88, 2].to_numpy()
-pressure_data = df.iloc[74:88, 3].astype(float).to_numpy()
-bottom_plate_temperature_data = df.iloc[74:88, 4].astype(float).to_numpy() + 273.15
-height_ice_data = df.iloc[74:88, 26].astype(float).to_numpy()/100
-height_data = df.iloc[74:88, 15].astype(float).to_numpy()/100
-height_err = 0.0005
+# df = pd.read_csv('Ice Levitation Data(Line Data - Nathan).csv')
+# time_stamp = df.iloc[74:88, 2].to_numpy()
+# pressure_data = df.iloc[74:88, 3].astype(float).to_numpy()
+# bottom_plate_temperature_data = df.iloc[74:88, 4].astype(float).to_numpy() + 273.15
+# height_ice_data = df.iloc[74:88, 26].astype(float).to_numpy()/100
+# height_data = df.iloc[74:88, 15].astype(float).to_numpy()/100
+# height_err = 0.0005
 
+# df = pd.read_csv('Line_levitation_data_V6.csv')
+#
+# pressure_A= df.iloc[74:90, 2].str.replace(',', '.').astype(float).to_numpy()
+# temperature_A = df.iloc[74:90, 3].astype(float).to_numpy() + 273.15
+# height_A = df.iloc[74:90, 15].astype(float).to_numpy()/100
+#
+# pressure_B= df.iloc[90:99, 2].str.replace(',', '.').astype(float).to_numpy()
+# temperature_B = df.iloc[90:99, 3].astype(float).to_numpy() + 273.15
+# height_B = df.iloc[90:99, 15].astype(float).to_numpy()/100
+#
+# pressure_C= df.iloc[99:111, 2].str.replace(',', '.').astype(float).to_numpy()
+# temperature_C = df.iloc[99:111, 3].astype(float).to_numpy() + 273.15
+# height_C = df.iloc[99:111, 15].astype(float).to_numpy()/100
+#
+# height_err = 0.0005
 
 
 target = 'temperature'          # 'height' or 'temperature'
 target_height = 0.007           # target height from bottom plate (meters)
 target_temp = 190               # target temperature (Kelvin)
 
-iterate_through_temps = True
-number_of_temps = 7
+iterate_through_temps = False
+number_of_temps = 10
 start_temp = 293
 end_temp = 373
 
-use_data = True
+use_data = False
 
 
 # temperatures in Kelvin
@@ -37,15 +51,15 @@ bottom_plate_temp = 300         # bottom plate (hot plate)
 boundary_temp = 290             # boundary temperature (room temperature)
 
 
-show_temp_distribution = False
-show_temp_slice = True
+show_temp_distribution = True
+show_temp_slice = False
 
 
 
 
 if iterate_through_temps:
     if use_data:
-        bottom_plate_temps = np.linspace(np.min(bottom_plate_temperature_data), np.max(bottom_plate_temperature_data), number_of_temps)
+        bottom_plate_temps = np.linspace(np.min([temperature_A, temperature_B, temperature_C]), np.max([temperature_A, temperature_B, temperature_C]), number_of_temps)
     else:
         bottom_plate_temps = np.linspace(start_temp, end_temp, number_of_temps)
 else:
@@ -81,6 +95,10 @@ Nr = 300                            # number of grid points in the radial direct
 Nz = 300                            # number of grid points in the axial direction
 
 
+# define the number of iterations to perform
+iterations = 20000              # number of iterations to perform
+
+
 ##### no need to change anything below this line #####
 
 
@@ -114,10 +132,6 @@ dradd = np.zeros((Nr, Nz))
 drsub = np.zeros((Nr, Nz))
 dzadd = np.zeros((Nr, Nz))
 dzsub = np.zeros((Nr, Nz))
-
-
-# define the number of iterations to perform
-iterations = 20000              # number of iterations to perform
 
 
 # start the simulation
@@ -226,7 +240,10 @@ if show_temp_slice and iterate_through_temps and target == 'temperature':
     plt.figure(figsize=(8, 5))
     plt.plot(bottom_plate_temps, np.array(heights_at_temp), 'b-', label=f'{target_temp:.2f}K Isotherm')
     if use_data:
-        plt.errorbar(bottom_plate_temperature_data, height_data, xerr=0, yerr=height_err, fmt='o', capsize=3, label='Data Points')
+        plt.errorbar(temperature_A, height_A, xerr=0, yerr=height_err, fmt='o', capsize=3, label='Particle A')
+        plt.errorbar(temperature_B, height_B, xerr=0, yerr=height_err, fmt='o', capsize=3, label='Particle B')
+        plt.errorbar(temperature_C, height_C, xerr=0, yerr=height_err, fmt='o', capsize=3, label='Particle C')
+
     plt.xlabel('Bottom Plate Temperature (K)')
     plt.ylabel('Height $z$ (m)')
     plt.title('Height vs Bottom Plate Temperature of Isotherm')

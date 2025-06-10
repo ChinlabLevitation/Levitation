@@ -6,14 +6,14 @@ import math
 molecMassAir = 4.81 * 10**-26
 boltzmannConstant = 1.38065 * 10**-23
 
-averagePressure = 10 * 133.322
-particleRadius = 13e-6
-particleDensity = 917
+averagePressure = 6 * 133.322               #torr
+particleRadius = 10e-6                      #meters
+particleDensity = 998                       #kg/m^3
 
 particleWeight = (4 * math.pi / 3) * particleRadius**3 * particleDensity * 9.81
 
 top_temp = 77
-bottom_temp = 300.65
+bottom_temp = 300
 
 a = 0.00014
 b = 0.91823
@@ -44,7 +44,7 @@ def bc(ya, yb):
     return np.array([ya[0] - bottom_temp, yb[0] - top_temp])
 
 
-z = np.linspace(0, 0.005, 1000)
+z = np.linspace(0, 0.01, 1000)
 dz = z[1] - z[0]
 
 T_guess = np.linspace(bottom_temp, top_temp, z.size)
