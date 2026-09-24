@@ -8,3 +8,8 @@
 *.docx
 .DS_Store
 *.csv
+
+# levitation-sim (Vite/React app)
+Theory/levitation-sim/node_modules/
+Theory/levitation-sim/dist/
+Theory/levitation-sim/.vite/
