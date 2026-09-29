@@ -13,3 +13,28 @@
 Theory/levitation-sim/node_modules/
 Theory/levitation-sim/dist/
 Theory/levitation-sim/.vite/
+# LaTeX build artifacts (commit the .tex source and the compiled .pdf only)
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.lot
+*.log
+*.nav
+*.out
+*.run.xml
+*.snm
+*.synctex
+*.synctex.gz
+*.synctex(busy)
+*.toc
+*.vrb
+*.xdv
+*.dvi
+# *.pdf is ignored globally above; re-include compiled LaTeX PDFs explicitly
+# (add a line here for each new writeup)
+!Theory/sim_symmetric_physics.pdf
+!Theory/figures/*.pdf

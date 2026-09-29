@@ -71,3 +71,16 @@ Once running, the interface has three panels:
 | Initial tilt | 30° | Around x-axis |
 | Simulation time | 20 s, 1200 steps | |
 
+
+## `Theory/LevitationSim6x6.ipynb`
+
+A Jupyter re-implementation of `sim_symmetric.jsx` that keeps all of its functionality and fixes the modelling issues listed in the caveats section of `Theory/sim_symmetric_physics.tex`:
+
+- one symmetric positive-definite 6×6 resistance matrix, including translation–rotation coupling;
+- a general 6×3 thermophoretic matrix (no imposed symmetry on Γ or Λ);
+- full inertia tensor, and a force centre offset from the centre of mass;
+- a corrected levitation offset (the old Γ₂₂ behaviour is kept as `g0_mode="LegacyJS"`).
+
+Markdown cells walk through the math. The notebook also includes RK4 and adaptive integrators, energy-budget and linear-stability diagnostics, animations, and a particle library (spheres, ellipsoids, and ellipsoids with a linear density gradient, in air at a given T and p). It runs 43 self-tests against the JS output, closed-form limits, and an independent reference implementation.
+
+Requires numpy, scipy and matplotlib. `ipywidgets` is optional, for the live viewer and explorer. Particle schematics are in `Theory/figures/particle_diagrams.pdf` (source `particle_diagrams.tex`; build with `latexmk -pdf`).

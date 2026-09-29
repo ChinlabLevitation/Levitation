@@ -1,0 +1,535 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{bm}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\newcommand{\vect}[1]{\bm{#1}}
+\newcommand{\tens}[1]{\mathsf{#1}}
+\newcommand{\ez}{\hat{\vect{e}}_z}
+\newcommand{\Rm}{\tens{R}}
+\newcommand{\Gl}{\vect{G}}
+\newcommand{\Gb}{\vect{G}_{b}}
+\newcommand{\T}{^{\mathsf{T}}}
+
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\title{Physics of \texttt{sim\_symmetric.jsx}:\\
+Rigid-Body Dynamics in a Harmonic Thermophoretic Trap}
+\author{Chin Lab, University of Chicago}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This note sets out the model solved by the interactive simulator
+\texttt{Theory/sim\_symmetric.jsx}. A rigid body of mass $M$ and inertia
+tensor $\tens{I}$ moves through a quiescent gas under gravity. It feels a
+thermophoretic force and torque that are linear in the local
+log-temperature gradient $\nabla\ln T$, plus linear translational and
+rotational drag. The temperature field is a phenomenological harmonic
+trap. Each of the four linear-response tensors is a constant symmetric
+$3\times3$ matrix in the body frame. The 13-dimensional state (position,
+velocity, unit quaternion, body angular velocity) is integrated with
+fixed-step fourth-order Runge--Kutta. We give the equations exactly as
+implemented, derive the equilibrium and the small-oscillation behaviour,
+and list the modelling assumptions and their consequences.
+\end{abstract}
+
+%=======================================================================
+\section{Frames and state variables}
+%=======================================================================
+
+We use two frames: the \emph{lab frame}
+$\{\hat{\vect{e}}_x,\hat{\vect{e}}_y,\hat{\vect{e}}_z\}$, with $\ez$
+pointing up (against gravity), and the \emph{body frame}, which is attached
+to the particle and whose axes are its principal axes of inertia. The
+rotation matrix $\Rm\in SO(3)$ maps body-frame components to lab-frame
+components:
+\begin{equation}
+  \vect{a}_{\text{lab}} = \Rm\,\vect{a}_b, \qquad
+  \vect{a}_b = \Rm\T \vect{a}_{\text{lab}} .
+\end{equation}
+
+The state vector $\vect{s}\in\mathbb{R}^{13}$ is
+\begin{equation}
+  \vect{s} = \bigl(\,\underbrace{\vect{x}}_{3},\;
+                  \underbrace{\vect{v}}_{3},\;
+                  \underbrace{q}_{4},\;
+                  \underbrace{\vect{\omega}_b}_{3}\,\bigr),
+\end{equation}
+where
+\begin{itemize}
+  \item $\vect{x}$ is the centre-of-mass position (lab frame),
+  \item $\vect{v}=\dot{\vect{x}}$ is the centre-of-mass velocity (lab frame),
+  \item $q=(q_0,\vect{q})$, with $\vect{q}=(q_1,q_2,q_3)$, is a unit
+        quaternion ($|q|=1$) that encodes the orientation, and
+  \item $\vect{\omega}_b$ is the angular velocity, expressed in the body frame.
+\end{itemize}
+
+\paragraph{Rotation matrix.} The quaternion determines the rotation
+matrix through
+\begin{equation}
+  \Rm(q) = \bigl(q_0^2-|\vect{q}|^2\bigr)\tens{1}
+         + 2\,\vect{q}\vect{q}\T + 2q_0[\vect{q}]_\times ,
+  \qquad
+  [\vect{q}]_\times =
+  \begin{pmatrix}
+    0 & -q_3 & q_2\\ q_3 & 0 & -q_1\\ -q_2 & q_1 & 0
+  \end{pmatrix}.
+\end{equation}
+Written out using $|q|=1$, this is
+\begin{equation}
+  \Rm =
+  \begin{pmatrix}
+    1-2(q_2^2+q_3^2) & 2(q_1q_2-q_0q_3) & 2(q_1q_3+q_0q_2)\\
+    2(q_1q_2+q_0q_3) & 1-2(q_1^2+q_3^2) & 2(q_2q_3-q_0q_1)\\
+    2(q_1q_3-q_0q_2) & 2(q_2q_3+q_0q_1) & 1-2(q_1^2+q_2^2)
+  \end{pmatrix}.
+\end{equation}
+
+\paragraph{Quaternion kinematics.} The orientation evolves as
+\begin{equation}
+  \dot q = \tfrac12\, q\otimes(0,\vect{\omega}_b)
+  \quad\Longleftrightarrow\quad
+  \dot q_0 = -\tfrac12\,\vect{q}\cdot\vect{\omega}_b, \qquad
+  \dot{\vect{q}} = \tfrac12\bigl(q_0\vect{\omega}_b + \vect{q}\times\vect{\omega}_b\bigr).
+  \label{eq:qdot}
+\end{equation}
+The body-frame angular velocity multiplies on the right in
+Eq.~\eqref{eq:qdot}. This is what makes $\Rm$ a body-to-lab map.
+
+\paragraph{Tilt.} The simulator reports the \emph{tilt}, defined as the angle
+between the body symmetry axis $\hat{\vect{e}}_3^{\,b}$ and the vertical:
+\begin{equation}
+  \theta = \arccos\bigl(\ez\cdot\Rm\,\hat{\vect{e}}_3\bigr) = \arccos R_{33}.
+\end{equation}
+
+%=======================================================================
+\section{Temperature field}
+%=======================================================================
+
+The gas temperature enters only through the dimensionless-per-length
+vector field
+\begin{equation}
+  \Gl(\vect{x}) \equiv \nabla\ln T = \frac{\nabla T}{T}.
+\end{equation}
+The simulator takes this field to be affine in position. In the lab frame,
+\begin{equation}
+  \boxed{\;
+  \Gl(\vect{x}) = \tens{A}\,\vect{x} + \Gl_0, \qquad
+  \tens{A} = \operatorname{diag}(\alpha_r,\alpha_r,\alpha_z), \qquad
+  \Gl_0 = -\frac{Mg}{\gamma_\ast}\,\ez \;}
+  \label{eq:field}
+\end{equation}
+Component by component,
+\begin{equation}
+  \Gl(\vect{x}) = \bigl(\alpha_r x,\ \alpha_r y,\ \alpha_z z - Mg/\gamma_\ast\bigr).
+\end{equation}
+The corresponding log-temperature profile is a paraboloid with a linear
+tilt:
+\begin{equation}
+  \ln\frac{T(\vect{x})}{T_0}
+  = \tfrac12\alpha_r\,(x^2+y^2) + \tfrac12\alpha_z z^2 - \frac{Mg}{\gamma_\ast}\,z .
+\end{equation}
+
+\begin{itemize}
+  \item \textbf{Uniform part $\Gl_0$.} $\Gl_0$ points down, so the gas is
+        hotter below and colder above, as with a hot bottom plate. Its
+        magnitude is fixed by the particle itself: the code sets
+        $|\Gl_0| = Mg/\gamma_\ast$ so that, for an isotropic response, the
+        thermophoretic force at the origin exactly cancels gravity
+        (Sec.~\ref{sec:equilibrium}). The trap is therefore always
+        centred at $\vect{x}=0$. Changing $M$ or $\Gamma$ does not move the
+        equilibrium; it only rescales the background gradient.
+  \item \textbf{Curvature $\tens{A}$.} The constants $\alpha_r$ and
+        $\alpha_z$ (units m$^{-2}$) set the radial and axial trap
+        stiffness. They are free phenomenological parameters.
+  \item \textbf{Normalising constant $\gamma_\ast$.} The code uses
+        $\gamma_\ast = \Gamma_{22}$, the $(2,2)$ entry of the
+        thermophoretic tensor (\texttt{Gamma[3]} in the packed
+        storage of Sec.~\ref{sec:tensors}). See caveat~\ref{rem:gamma22} in Sec.~\ref{sec:caveats}.
+\end{itemize}
+
+The gas is at rest everywhere, and the temperature field does not depend
+on time.
+
+%=======================================================================
+\section{Linear-response tensors}
+\label{sec:tensors}
+%=======================================================================
+
+Four constant $3\times3$ tensors, defined in the body frame, set how the
+body couples to the gas. Let $\vect{v}_b=\Rm\T\vect{v}$ be the body-frame
+velocity and $\Gb=\Rm\T\Gl(\vect{x})$ the gradient seen by the body. Then
+\begin{align}
+  \vect{F}_b^{\text{drag}} &= -\,\tens{\Xi}\,\vect{v}_b
+      && \text{translational drag,}\\
+  \vect{F}_b^{\text{T}}    &= -\,\tens{\Gamma}\,\Gb
+      && \text{thermophoretic force,}\\
+  \vect{\tau}_b^{\text{T}} &= -\,\tens{\Lambda}\,\Gb
+      && \text{thermophoretic torque,}\\
+  \vect{\tau}_b^{\text{drag}} &= -\,\tens{C}_r\,\vect{\omega}_b
+      && \text{rotational drag.}
+\end{align}
+Take $\tens{\Gamma}=\gamma\tens{1}$ with $\gamma>0$ as an example. The force
+$-\gamma\nabla\ln T$ then points from hot to cold, as expected for
+thermophoresis.
+
+\paragraph{Symmetry by construction.} The code stores each tensor as the
+six independent entries of a symmetric matrix,
+\begin{equation}
+  \tens{t} \;\longleftrightarrow\; (t_{11},t_{12},t_{13},t_{22},t_{23},t_{33}),
+  \qquad
+  \tens{t} =
+  \begin{pmatrix}
+    t_{11} & t_{12} & t_{13}\\
+    t_{12} & t_{22} & t_{23}\\
+    t_{13} & t_{23} & t_{33}
+  \end{pmatrix}
+  = \tens{t}\T .
+\end{equation}
+This gives $4\times6=24$ independent response parameters. The rationale
+given in the code is:
+\begin{itemize}
+  \item $\tens{\Xi}$ and $\tens{C}_r$ are resistance tensors. For
+        low-Reynolds-number flow, the Lorentz reciprocal theorem (the
+        hydrodynamic form of Onsager reciprocity) makes them symmetric.
+        The second law adds positive (semi)definiteness, because the
+        dissipated power is
+        \begin{equation}
+          P_{\text{diss}} = \vect{v}_b\cdot\tens{\Xi}\,\vect{v}_b
+                          + \vect{\omega}_b\cdot\tens{C}_r\,\vect{\omega}_b \;\ge 0 .
+        \end{equation}
+        The simulator enforces symmetry but does \emph{not} enforce
+        positive-definiteness. The user must pick physically sensible
+        values.
+  \item $\tens{\Gamma}$ and $\tens{\Lambda}$ are taken to be symmetric,
+        motivated by Onsager reciprocity. This is a modelling choice, and
+        its consequences are discussed in Sec.~\ref{sec:caveats}.
+  \item $\tens{\Lambda}$ is a pseudotensor: it maps a polar vector
+        ($\nabla\ln T$) to an axial vector (torque). Its symmetric part
+        can be nonzero only for bodies without enough improper symmetry;
+        in particular, its trace requires a chiral body. The default
+        $\tens{\Lambda}=0$ is correct for a right circular cylinder.
+\end{itemize}
+
+\paragraph{Lab-frame form.} In the lab frame the tensors become
+orientation dependent:
+\begin{equation}
+  \tens{\Gamma}'(q) \equiv \Rm\,\tens{\Gamma}\,\Rm\T, \qquad
+  \tens{\Xi}'(q) \equiv \Rm\,\tens{\Xi}\,\Rm\T .
+\end{equation}
+An isotropic tensor $\tens{t}=t\tens{1}$ is unchanged by this rotation.
+
+%=======================================================================
+\section{Equations of motion}
+%=======================================================================
+
+\subsection{Translation}
+
+Newton's second law for the centre of mass, with the forces evaluated in
+the body frame and then rotated back to the lab frame, reads
+\begin{equation}
+  M\dot{\vect{v}}
+  = \Rm\Bigl[-\tens{\Gamma}\,\Rm\T\Gl(\vect{x}) - \tens{\Xi}\,\Rm\T\vect{v}\Bigr]
+    - Mg\,\ez .
+  \label{eq:trans}
+\end{equation}
+Equivalently,
+\begin{equation}
+  M\ddot{\vect{x}}
+  = -\tens{\Gamma}'\bigl(\tens{A}\vect{x}+\Gl_0\bigr)
+    - \tens{\Xi}'\,\dot{\vect{x}} - Mg\,\ez .
+\end{equation}
+
+\subsection{Rotation}
+
+Euler's equations in the principal body frame, with
+$\tens{I}=\operatorname{diag}(I_1,I_2,I_3)$, are
+\begin{equation}
+  \tens{I}\,\dot{\vect{\omega}}_b
+  = -\,\vect{\omega}_b\times\bigl(\tens{I}\,\vect{\omega}_b\bigr)
+    - \tens{\Lambda}\,\Gb - \tens{C}_r\,\vect{\omega}_b ,
+  \qquad \Gb = \Rm\T\Gl(\vect{x}).
+  \label{eq:rot}
+\end{equation}
+Written out in components, the gyroscopic term gives the familiar form
+\begin{equation}
+  I_1\dot\omega_1 = (I_2-I_3)\,\omega_2\omega_3 + \tau_1,\quad
+  I_2\dot\omega_2 = (I_3-I_1)\,\omega_3\omega_1 + \tau_2,\quad
+  I_3\dot\omega_3 = (I_1-I_2)\,\omega_1\omega_2 + \tau_3,
+\end{equation}
+with $\vect{\tau} = -\tens{\Lambda}\Gb - \tens{C}_r\vect{\omega}_b$.
+The torques are taken about the centre of mass, and the thermophoretic
+force is assumed to act through that point.
+
+\subsection{Complete system}
+
+Together with Eq.~\eqref{eq:qdot}, the model is the closed autonomous
+system
+\begin{equation}
+  \boxed{
+  \begin{aligned}
+    \dot{\vect{x}} &= \vect{v},\\
+    M\dot{\vect{v}} &= -\Rm\bigl(\tens{\Gamma}\Gb + \tens{\Xi}\,\Rm\T\vect{v}\bigr) - Mg\,\ez,\\
+    \dot q &= \tfrac12\,q\otimes(0,\vect{\omega}_b),\\
+    \tens{I}\dot{\vect{\omega}}_b &= -\vect{\omega}_b\times\tens{I}\vect{\omega}_b
+        - \tens{\Lambda}\Gb - \tens{C}_r\vect{\omega}_b,
+  \end{aligned}
+  \qquad \Gb = \Rm(q)\T\bigl(\tens{A}\vect{x}+\Gl_0\bigr).}
+\end{equation}
+The translational and rotational sectors are coupled in two ways:
+\begin{enumerate}
+  \item through $\Rm(q)$ in the force, if $\tens{\Gamma}$ or
+        $\tens{\Xi}$ is anisotropic, and
+  \item through $\Gb(\vect{x},q)$ in the torque, if $\tens{\Lambda}\neq0$.
+\end{enumerate}
+
+%=======================================================================
+\section{Equilibrium and small oscillations}
+\label{sec:equilibrium}
+%=======================================================================
+
+\subsection{Isotropic response}
+
+Take $\tens{\Gamma}=\gamma\tens{1}$ and $\tens{\Xi}=\xi\tens{1}$, so that
+$\gamma_\ast=\gamma$. Then $\tens{\Gamma}'=\gamma\tens{1}$ for every
+orientation. The translational equation decouples from the rotation and
+is \emph{exactly} linear:
+\begin{equation}
+  M\ddot{\vect{x}} = -\gamma\tens{A}\vect{x} - \xi\dot{\vect{x}}
+  + \underbrace{\bigl(-\gamma\Gl_0 - Mg\,\ez\bigr)}_{=\,0}.
+\end{equation}
+Gravity is cancelled identically by the background gradient. Each axis
+$i\in\{x,y,z\}$ is an independent damped harmonic oscillator:
+\begin{equation}
+  \ddot x_i + 2\zeta_i\omega_{0,i}\,\dot x_i + \omega_{0,i}^2 x_i = 0,
+  \qquad
+  \omega_{0,i}^2 = \frac{\gamma\alpha_i}{M},
+  \qquad
+  \zeta_i = \frac{\xi}{2\sqrt{M\gamma\alpha_i}} ,
+\end{equation}
+where $\alpha_{x}=\alpha_y=\alpha_r$ and $\alpha_z=\alpha_z$. The origin is
+asymptotically stable if $\gamma\alpha_i>0$ and $\xi>0$. The translational
+energy
+\begin{equation}
+  E_{\text{tr}} = \tfrac12 M|\vect{v}|^2
+  + \tfrac12\gamma\bigl[\alpha_r(x^2+y^2)+\alpha_z z^2\bigr]
+\end{equation}
+is a Lyapunov function with $\dot E_{\text{tr}} = -\xi|\vect{v}|^2$.
+
+\paragraph{Default parameters.} With $M=1$, $\gamma=5$,
+$\alpha_r=\alpha_z=0.5$, and $\xi=2$, all three axes have
+\begin{equation}
+  \omega_0=\sqrt{2.5}\approx1.58~\text{s}^{-1},\quad
+  \zeta\approx0.63,\quad
+  \omega_d=\omega_0\sqrt{1-\zeta^2}\approx1.22~\text{s}^{-1},\quad
+  \text{decay rate } \frac{\xi}{2M}=1~\text{s}^{-1}.
+\end{equation}
+The motion is underdamped, with period $2\pi/\omega_d\approx5.1$\,s. For
+example, starting from rest,
+$z(t)=z_0\,e^{-t}\bigl[\cos\omega_d t+\omega_d^{-1}\sin\omega_d t\bigr]$
+with $z_0=0.2$. The simulator output matches this to its printed precision
+($z=0.0815,\,-0.0067,\,0.0012$ at $t=1,2,5$\,s).
+
+\subsection{Anisotropic response}
+
+For a general $\tens{\Gamma}$, the equilibrium at fixed orientation $q$
+satisfies
+\begin{equation}
+  \tens{\Gamma}'\bigl(\tens{A}\vect{x}^\ast + \Gl_0\bigr) = -Mg\,\ez
+  \quad\Longrightarrow\quad
+  \vect{x}^\ast = Mg\,\tens{A}^{-1}\Bigl[\frac{\ez}{\gamma_\ast}
+                 - \tens{\Gamma}'^{-1}\ez\Bigr].
+\end{equation}
+The trap centre lies at the origin only when $\ez$ is an eigenvector of
+$\tens{\Gamma}'$ with eigenvalue $\gamma_\ast$. Otherwise the equilibrium
+is displaced, and the displacement depends on orientation. Near
+equilibrium the effective stiffness matrix is
+\begin{equation}
+  \tens{K} = \tens{\Gamma}'\tens{A}.
+\end{equation}
+$\tens{K}$ is symmetric only when $\tens{\Gamma}'$ and $\tens{A}$ commute,
+which holds automatically when $\alpha_r=\alpha_z$. If they do not
+commute, the restoring force has a nonzero curl
+($\nabla\times\vect{F}\neq0$). It is then a non-conservative ``curl
+force'' that can drive circulating orbits, so $E_{\text{tr}}$ no longer
+works as a Lyapunov function.
+
+%=======================================================================
+\section{Rotational dynamics}
+%=======================================================================
+
+With $\tens{\Lambda}=0$ there is \emph{no orientational restoring torque}:
+every orientation is neutrally stable. Take isotropic rotational drag
+$\tens{C}_r=c\tens{1}$ and an axisymmetric body with
+$I_1=I_2\equiv I_\perp$. Euler's equations can then be solved in closed
+form. The spin about the symmetry axis decays exponentially,
+\begin{equation}
+  \omega_3(t) = \omega_3(0)\,e^{-ct/I_3}.
+\end{equation}
+The transverse component $\omega_\perp\equiv\omega_1+i\omega_2$ obeys
+\begin{equation}
+  \dot\omega_\perp = \bigl(i\Omega(t) - c/I_\perp\bigr)\,\omega_\perp,
+  \qquad
+  \Omega(t) = \frac{I_3-I_\perp}{I_\perp}\,\omega_3(t),
+\end{equation}
+which integrates to
+\begin{equation}
+  \omega_\perp(t) = \omega_\perp(0)\,
+  \exp\!\Bigl[-\frac{c\,t}{I_\perp}
+  + i\,\frac{(I_3-I_\perp)I_3}{I_\perp c}\,\omega_3(0)\bigl(1-e^{-ct/I_3}\bigr)\Bigr].
+\end{equation}
+So $\vect{\omega}_b$ performs a damped body-frame precession and falls to
+zero. The rotational energy $\tfrac12\vect{\omega}_b\cdot\tens{I}\vect{\omega}_b$
+decreases at the rate $c|\vect{\omega}_b|^2$. The orientation then
+\emph{freezes} at whatever value it has reached.
+
+\paragraph{Default parameters.} With $\tens{I}=\operatorname{diag}(0.02,0.02,0.008)$
+and $c=0.5$, the spin-down times are $I_\perp/c=0.04$\,s and $I_3/c=0.016$\,s.
+Both are much shorter than the translational time scale. The total
+transverse rotation angle is only about $|\omega_\perp(0)|\,I_\perp/c\approx0.02$\,rad,
+so the tilt stays at its initial $30^\circ$ to the displayed precision.
+
+\paragraph{Nonzero $\tens{\Lambda}$.} At the trap centre, a body with
+$\tens{\Lambda}\neq0$ still feels the torque
+$-\tens{\Lambda}\Rm\T\Gl_0 = (Mg/\gamma_\ast)\,\tens{\Lambda}\,\Rm\T\ez$,
+because $\Gl_0\neq0$. The body therefore generically does not come to
+rest. A chiral body, for example, can be driven into steady rotation, with
+the thermophoretic torque balanced by rotational drag.
+
+%=======================================================================
+\section{Numerical method}
+%=======================================================================
+
+\begin{itemize}
+  \item \textbf{Integrator.} Classical fixed-step RK4 on
+        $\dot{\vect{s}}=\vect{f}(\vect{s})$, with
+        $\Delta t = t_{\text{end}}/N$. The default is
+        $t_{\text{end}}=20$\,s and $N=1200$, which gives $\Delta t=1/60$\,s.
+  \item \textbf{Quaternion normalisation.} $q$ is renormalised inside every
+        right-hand-side evaluation and again after every step. This removes
+        the drift off $|q|=1$ that the unconstrained RK4 update would
+        otherwise accumulate.
+  \item \textbf{Initial conditions.} The initial orientation is a rotation
+        by $\theta_0$ about $\hat{\vect{e}}_x$:
+        $q(0)=(\cos\tfrac{\theta_0}{2},\sin\tfrac{\theta_0}{2},0,0)$.
+        The user also sets $\vect{x}_0$, $\vect{v}_0$, and $\vect{\omega}_{b,0}$.
+  \item \textbf{Stability.} Explicit RK4 needs $|\lambda|\Delta t\lesssim2.8$
+        for real, negative eigenvalues $\lambda$. The fastest default mode
+        is the axial spin-down, with $c/I_3=62.5$\,s$^{-1}$, giving
+        $|\lambda|\Delta t\approx1.04$. This is stable, though the fast
+        rotational transient is resolved by only a few steps. Making
+        $I_3$ smaller or $c$ larger by a factor of about~3 would push the
+        integration past the stability limit.
+\end{itemize}
+
+%=======================================================================
+\section{Modelling assumptions and caveats}
+\label{sec:caveats}
+%=======================================================================
+
+\begin{enumerate}
+  \item \textbf{Linear response, constant coefficients.} All four tensors
+        are independent of position, temperature, pressure, and velocity.
+        Real thermophoretic coefficients depend on the local gas state
+        (for example, $T$, $p$, and the Knudsen number) and vary across
+        the cell.
+
+  \item \textbf{Missing cross-couplings.} The full $6\times6$ resistance
+        matrix of a rigid body has an off-diagonal translation--rotation
+        block, which is nonzero for chiral bodies and for bodies whose
+        reference point is not the centre of reaction. The model omits it.
+        It likewise omits any force or torque proportional to higher
+        gradients of $T$.
+
+  \item \textbf{Symmetric $\tens{\Lambda}$ excludes alignment torques.}
+        Consider a polar but achiral body, such as a cone or a Janus
+        particle, with symmetry group $C_{\infty v}$ and axis
+        $\hat{\vect{n}}$. The most general $\tens{\Lambda}$ allowed by
+        this symmetry is purely \emph{antisymmetric}, giving the aligning
+        torque $\vect{\tau}\propto\hat{\vect{n}}\times\nabla\ln T$.
+        Imposing $\tens{\Lambda}=\tens{\Lambda}\T$ forbids this torque. A
+        symmetric $\tens{\Lambda}$ describes chirality-type couplings
+        instead. For example, $D_\infty$ (helix-like) bodies give
+        $\tens{\Lambda}=\operatorname{diag}(a,a,b)$.
+
+  \item \textbf{Phenomenological trap.}
+        \label{rem:gammaconstraint}
+        $\alpha_r$ and $\alpha_z$ are free parameters. If $T$ instead
+        obeyed source-free steady conduction with $\kappa\propto T^n$,
+        then $\nabla\!\cdot(T^{n+1}\nabla\ln T)=0$, which implies
+        \begin{equation}
+          \nabla^2\ln T = -(n+1)\,|\nabla\ln T|^2 .
+        \end{equation}
+        At the trap centre this requires
+        $2\alpha_r+\alpha_z=-(n+1)(Mg/\gamma)^2<0$ for $n>-1$. So a
+        constant isotropic $\gamma$ acting on a purely conductive field
+        cannot confine the particle along all three axes at once; this is
+        an Earnshaw-type obstruction. The harmonic trap should therefore
+        be read as an effective description that absorbs whatever
+        provides confinement in the experiment, such as spatially varying
+        coefficients, boundaries, or convection.
+
+  \item \textbf{Choice of $\gamma_\ast$.}
+        \label{rem:gamma22}
+        The code sets $\gamma_\ast=\Gamma_{22}$ (\texttt{Gamma[3]}). But
+        gravity is along $\ez$, and for an upright body with diagonal
+        $\tens{\Gamma}$ the component that cancels gravity is
+        $\Gamma_{33}$ (\texttt{Gamma[5]}). The two coincide for isotropic
+        $\tens{\Gamma}$, including the defaults. For
+        $\tens{\Gamma}=\operatorname{diag}(\Gamma_{11},\Gamma_{22},\Gamma_{33})$
+        with $\Gamma_{22}\neq\Gamma_{33}$, the equilibrium of an upright
+        body moves to
+        \begin{equation}
+          z^\ast=\frac{Mg}{\alpha_z}\Bigl(\frac{1}{\Gamma_{22}}-\frac{1}{\Gamma_{33}}\Bigr).
+        \end{equation}
+
+  \item \textbf{Positivity not enforced.} Nothing in the code prevents
+        indefinite $\tens{\Xi}$ or $\tens{C}_r$. Such values would inject
+        energy and are unphysical.
+
+  \item \textbf{Principal axes.} $\tens{I}$ is diagonal in the same body
+        frame in which the response tensors are specified. If the
+        principal axes of inertia do not coincide with the frame in which
+        the tensors are known, the tensors must first be rotated into the
+        principal frame.
+\end{enumerate}
+
+%=======================================================================
+\appendix
+\section{Default parameters}
+%=======================================================================
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Quantity & Symbol & Default (as in code) \\
+\midrule
+Mass & $M$ & $1$ kg \\
+Gravity & $g$ & $9.81$ m\,s$^{-2}$ \\
+Inertia & $\tens{I}$ & $\operatorname{diag}(0.02,0.02,0.008)$ kg\,m$^2$ \\
+Translational drag & $\tens{\Xi}$ & $2\,\tens{1}$ \\
+Thermophoretic force & $\tens{\Gamma}$ & $5\,\tens{1}$ \\
+Thermophoretic torque & $\tens{\Lambda}$ & $0$ \\
+Rotational drag & $\tens{C}_r$ & $0.5\,\tens{1}$ \\
+Trap curvatures & $\alpha_r,\ \alpha_z$ & $0.5,\ 0.5$ \\
+Initial position & $\vect{x}_0$ & $(0.5,\,0.3,\,0.2)$ m \\
+Initial velocity & $\vect{v}_0$ & $0$ \\
+Initial body angular velocity & $\vect{\omega}_{b,0}$ & $(0,\,0.5,\,2)$ rad\,s$^{-1}$ \\
+Initial tilt (about $\hat{\vect{e}}_x$) & $\theta_0$ & $30^\circ$ \\
+Duration, steps & $t_{\text{end}},\ N$ & $20$ s, $1200$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Note that the README lists $\tens{\Xi}=5\,\tens{1}$, but the code default
+is $2\,\tens{1}$. With $\xi=5$, the translational damping ratio would be
+$\zeta\approx1.58$, which is overdamped, rather than $0.63$.
+
+\end{document}
