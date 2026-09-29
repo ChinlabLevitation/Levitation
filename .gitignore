@@ -37,3 +37,5 @@ Theory/levitation-sim/.vite/
 # (add a line here for each new writeup)
 !Theory/sim_symmetric_physics.pdf
 !Theory/figures/*.pdf
+!Theory/ThermophoreticForce_v22.pdf
+!Theory/ThermophoreticForce_v22_corrections.pdf

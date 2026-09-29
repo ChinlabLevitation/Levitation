@@ -1,0 +1,241 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs,longtable,array}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+\newcommand{\vect}[1]{\bm{#1}}
+\newcommand{\T}{^{\!\top}}
+\newcommand{\old}{\par\noindent\textbf{v21:}\ }
+\newcommand{\new}{\par\noindent\textbf{v22:}\ }
+\newcommand{\why}{\par\noindent\textbf{Reason:}\ }
+\newcommand{\entry}[2]{\subsection*{#1\quad #2}\addcontentsline{toc}{subsection}{#1\quad #2}}
+
+\title{Corrections to ``Notes on Thermophoretic Force''\\[4pt]\large from v21 to v22}
+\author{}
+\date{September 2026}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+
+\section*{Summary}
+Every statement of C.~Chin's \emph{Notes on Thermophoretic Force} (v21) that can be checked was tested in the Mathematica notebook \texttt{ThermophoreticForce\_v21\_verification.nb}. The notebook reproduces the notes section by section and runs 106 checks. The checks use:
+\begin{itemize}
+  \item symbolic algebra and linear stability analysis;
+  \item group-theoretic symmetry reduction;
+  \item unit analysis;
+  \item direct numerical integration of the equations of motion;
+  \item an independent kinetic-theory derivation of the free-molecular surface stresses, which reproduces Waldmann's thermophoretic force and Epstein's drag for a sphere.
+\end{itemize}
+Of the 106 checks, 65 confirm the notes as written, 28 found discrepancies, and 13 are remarks.
+
+The discrepancies are collected below as 19 changes, labelled C1--C19. The same labels appear in the margin of the corrected notes, \texttt{ThermophoreticForce\_v22.pdf}, next to each changed passage. Equation numbers are unchanged from v21. Equations added in v22 carry tags such as (29a) and (41a).
+
+The corrections that change results are the following:
+\begin{itemize}
+  \item \textbf{C11:} the stability analysis of the spin eigenmotions.
+  \item \textbf{C13:} the drag anisotropy was kept by mistake in the levitation gradient and the orbit radius.
+  \item \textbf{C14--C17:} sign and prefactor errors in the surface-element, disk and cylinder formulas.
+  \item \textbf{C19:} the free-molecule rotational drag coefficient is 2.8 times larger than stated, which lowers the gyrophoretic estimate from $1.6\,F_T$ to $0.56\,F_T$.
+\end{itemize}
+The overall picture of the notes is unchanged. $F_T$ levitates the particle; a generic particle spins about the gradient axis and moves on a horizontal circle; and the gyrophoretic force of a strongly non-spherical particle is comparable to $F_T$ in the transition regime.
+
+\begin{center}
+\small
+\begin{longtable}{@{}l p{2.6cm} p{2.0cm} p{8.1cm}@{}}
+\toprule
+ID & Location & Type & Change\\
+\midrule
+\endhead
+C1 & Sec.~1 intro & reference & Disk and cylinder are in Sections~4 and~5, not 2 and~3.\\
+C2 & Sec.~1.2 & clarification & Symmetry of $\mathbf f_{\rm th}$ is an assumption; symmetry of the drag tensors follows from reciprocity, not from dissipation.\\
+C3 & Eq.~(10) & error & The block response multiplies $\mathbf T_{\rm drag}$ by $\vect v$; it needs three driving fields $(\nabla\ln T,\vect v,\vect\omega)$.\\
+C4 & Secs.~1.4, 3 & error (wording) & $\nabla T$ along $-\hat Z$ means hot below, cold above.\\
+C5 & Sec.~1.7 & reference & Circular orbits are derived in Sections~2.2--2.3.\\
+C6 & Sec.~1.7 & typo & Three mirror planes give 9 DOF, not 18.\\
+C7 & Eq.~(29), Table~1 & error & $\mathbf T_{\rm th}=0$ holds for $D_{\infty h}$ (cylinders, spheroids), not for $C_{\infty v}$, which allows an aligning torque. Added Eq.~(29a) and a table row.\\
+C8 & Eqs.~(30)--(31) & error (units) & $\gamma_0=f_0=\eta\kappa\ell^2T/\bar v$; the factor $T$ was missing.\\
+C9 & Sec.~2 intro & typo & Four tensors with 27 parameters, not five with 24.\\
+C10 & Sec.~2.1, Sec.~6 & clarification & Gyrophoretic note completed; the effect is $O(\varepsilon^2)$ for near-spheres.\\
+C11 & Eq.~(41), Sec.~2.2 & error & Rate formula replaced by the exact linear stability analysis, (41)--(41b); contradictory text removed; attractor rule for general spectra.\\
+C12 & Eq.~(42) & clarification & Neglected centripetal acceleration and the exact correction factor.\\
+C13 & Eqs.~(44)--(49) & error & Drag anisotropy enters only at $O(\varepsilon^2)$: $\delta\mathbf A=\delta\mathbf f_{\rm th}/\xi_0$; fixes in (46), (47), (49) and the hover condition.\\
+C14 & Eq.~(50), Sec.~3 & error & Signs of the tangential drag and tangential thermophoretic stress; definition of $\vect v$ and $\nu$.\\
+C15 & Eq.~(51) & error & Same tangential signs; spurious factor $a$ on the normal drag removed.\\
+C16 & Eqs.~(52)--(54) & error & Prefactor $f=mN\sqrt\pi\,rL/\sqrt h$; tilt sense stated; $\theta=0$ is a horizontal cylinder.\\
+C17 & Eq.~(56) & error & $2\sqrt\pi\,mN\nu/\sqrt h=\eta\kappa T/\bar v$.\\
+C18 & Eq.~(58) & clarification & Waldmann's formula involves the translational conductivity.\\
+C19 & Eqs.~(60)--(62), Table~2 & error & Free-molecule $C_r=\frac{8\sqrt\pi}{3}\frac{P}{\bar v}\ell^4$; updated $\omega_{\rm ss}$, $F_\omega$, (62), Table~2 and conclusions.\\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\section*{Details}
+
+\entry{C1}{Section 1, first paragraph}
+\old ``The disk and cylinder examples in Sections~2 and~3 \ldots''
+\new ``\ldots in Sections~4 and~5 \ldots''
+\why Section~2 is the near-sphere theory and Section~3 the surface element.
+
+\entry{C2}{Section 1.2: symmetry of the tensors}
+\old $\mathbf f_{\rm th}$ ``is symmetric positive-definite (6 DOF)''; for $\mathbf f_{\rm drag}$, ``$P<0$ for all $\vect v$ forces positive-definiteness, and only the symmetric part contributes to $P$''.
+\new $\mathbf f_{\rm th}$ is \emph{taken} symmetric, and this is stated as an assumption. The drag tensors are symmetric by Onsager/Lorentz reciprocity and positive-definite by dissipation.
+\why The quadratic form $\vect v\T\mathbf A\vect v$ is blind to the antisymmetric part of $\mathbf A$, so dissipation constrains only the symmetric part. Symmetry itself is a reciprocity statement. For $\mathbf f_{\rm th}$ there is no such statement, and the chiral point group $C_\infty$ allows an antisymmetric part: the invariant-tensor count gives 3 DOF for a general $\mathbf f_{\rm th}$, against 2 for a symmetric one.
+
+\entry{C3}{Eq.~(10): collected linear response}
+\old
+\[
+  \begin{pmatrix}\vect F^b\\ \vect\tau^b\end{pmatrix}=-\begin{pmatrix}\mathbf f_{\rm th} & \mathbf f_{\rm drag}\\ \mathbf T_{\rm th} & \mathbf T_{\rm drag}\end{pmatrix}\begin{pmatrix}(\nabla\ln T)^b\\ \vect v^b\end{pmatrix},
+  \quad\text{``the driving fields are $\nabla\ln T$ and $\vect v$ (not $\vect\omega$)''.}
+\]
+\new
+\[
+  \begin{pmatrix}\vect F^b\\ \vect\tau^b\end{pmatrix}=-\begin{pmatrix}\mathbf f_{\rm th} & \mathbf f_{\rm drag} & 0\\ \mathbf T_{\rm th} & 0 & \mathbf T_{\rm drag}\end{pmatrix}\begin{pmatrix}(\nabla\ln T)^b\\ \vect v^b\\ \vect\omega^b\end{pmatrix}.
+\]
+The zero blocks are identified as the omitted translation--rotation couplings.
+\why Multiplying out the v21 matrix gives $\vect\tau^b=-\mathbf T_{\rm th}(\nabla\ln T)^b-\mathbf T_{\rm drag}\vect v^b$. That disagrees with Eqs.~(7) and~(9), and it is not even dimensionally a torque.
+
+\entry{C4}{Direction of the gradient (Sections 1.4 and 3)}
+\old Sec.~1.4: ``$\nabla T$ is also taken along $-\hat Z$ (hot above cold)''. Sec.~3: ``$\nabla T=-T'(0,0,1)$, so the gas is hotter at large $z$ (cold below, hot above)''.
+\new ``hot below, cold above'' and ``colder at large $z$''.
+\why $T(z)=T_0-T'z$ decreases with height. The stated direction of the force (up, toward cold) was already correct.
+
+\entry{C5}{Section 1.7, Level 1}
+\old ``\ldots circular orbits (Section~2.2).'' \new ``(Sections~2.2--2.3).''
+\why The orbit itself is derived in Section~2.3.
+
+\entry{C6}{Section 1.7, Level 2 heading}
+\old ``Three mutually perpendicular mirror planes (18 DOF).'' \new ``(9 DOF).''
+\why Invariance under the three reflections leaves $3+3+0+3=9$ parameters, as the text below Eq.~(28) and Table~1 already state.
+
+\entry{C7}{Section 1.7, Level 3a and Table 1}
+\old ``Uniaxial symmetry, $C_{\infty v}$ (6 DOF) \ldots $\mathbf T_{\rm th}=0$. Bodies: cylinders, spheroids.''
+\new ``Uniaxial with a perpendicular mirror plane, $D_{\infty h}$ (6 DOF)'', followed by a new paragraph and Eq.~(29a):
+\[
+  C_{\infty v}:\quad \mathbf T_{\rm th}=\lambda_a[\hat e_3]_\times,\qquad \vect\tau^b_{\rm th}=-\lambda_a\,\hat e_3\times(\nabla\ln T)^b\qquad(7\ \text{DOF}).
+\]
+Table~1 gains a row for $C_{\infty v}$ and labels the uniaxial row $D_{\infty h}$.
+\why $\mathbf T_{\rm th}$ is a pseudotensor, $X=\det(g)\,gXg\T$. Solving the invariance conditions gives one invariant for $C_{\infty v}$: a cone or Janus particle feels a torque that aligns its axis with the gradient. $\mathbf T_{\rm th}$ vanishes only for $D_{\infty h}$, which contains the perpendicular mirror plane; cylinders and spheroids belong to this group. The form of the other three tensors is the same for both groups.
+
+\entry{C8}{Eqs.~(30)--(31): sphere value of $\mathbf f_{\rm th}$}
+\old $\gamma_0=\eta(\kappa/\bar v)\ell^2$.
+\new $\gamma_0=\eta(\kappa/\bar v)\ell^2T$ (and $f_0=\eta\kappa\ell^2T/\bar v$ in the Waldmann remark after Eq.~(30)).
+\why $\mathbf f_{\rm th}$ multiplies $\nabla\ln T=\nabla T/T$ and has units of N\,m (Eq.~(11)). $\eta\kappa\ell^2/\bar v$ has units J/K. Waldmann's force, Eq.~(58), is written with $\nabla T$, and converting it supplies the factor $T$.
+
+\entry{C9}{Section 2, introduction}
+\old ``five tensors with up to 24 independent parameters''. \new ``four tensors with up to 27 independent parameters''.
+\why See Table~1.
+
+\entry{C10}{Gyrophoretic coupling (Sections 2.1 and 6)}
+\old ``Since no experimental evidence currently constrains the relationship and $\mathbf T_{\rm th}$; any gyrophoretic coupling is $O(\varepsilon^2)$ and is neglected.''
+\new The sentence is completed. For a near-sphere the coupling is $O(\varepsilon)$ and the steady spin is $O(\varepsilon)$, so the gyrophoretic force is $O(\varepsilon^2)$. Section~6 now states that its estimate refers to a strongly non-spherical particle ($\varepsilon\sim1$) and carries a factor $\varepsilon^2$ for near-spheres.
+\why The v21 sentence was missing a word. Section~6 concluded that the effect is comparable to $F_T$ without reconciling this with its neglect in Section~2.
+
+\entry{C11}{Eq.~(41): stability of the three eigenmotions}
+\old
+\[
+  \sigma_{kj}=\frac{G\varepsilon(\lambda_k-\lambda_j)\lambda_j}{I_0c_0}\quad(j\neq k).
+\]
+The text first concludes that for $\lambda_3>\lambda_2>\lambda_1>0$ ``the stable attractor is then $\vect e_1$'', and then that $\vect e_3$ is the stable attractor (table). It states that ``all generic initial conditions converge to eigenmotion~3''.
+
+\new Exact linearisation of Eq.~(37) about $(\vect\omega^b,\vect u)=(g\lambda_k\vect e_k/c_0,\vect e_k)$, with $g=G\varepsilon$. The transverse modes obey the quartic
+\[
+  c_0^2I_0^2s^4+2c_0^3I_0s^3+(c_0^4+g^2I_0^2\lambda_k^2)s^2+c_0g^2I_0\lambda_k(2\lambda_k-\lambda_j-\lambda_l)s+c_0^2g^2(\lambda_k-\lambda_j)(\lambda_k-\lambda_l)=0,
+\]
+whose Routh--Hurwitz conditions are exact. For weak inertia,
+\[
+  s\simeq\pm i\frac{g}{c_0}\sqrt{(\lambda_k-\lambda_j)(\lambda_k-\lambda_l)}-\frac{g^2I_0}{2c_0^3}\big[\lambda_j(\lambda_k-\lambda_l)+\lambda_l(\lambda_k-\lambda_j)\big],
+\]
+so $\vect e_k$ is stable if and only if (a) $(\lambda_k-\lambda_j)(\lambda_k-\lambda_l)>0$ and (b) $\lambda_j(\lambda_k-\lambda_l)+\lambda_l(\lambda_k-\lambda_j)>0$. The table of v21 ($\vect e_3$ stable) is kept, restricted to a positive-definite $\delta\mathbf T_{\rm th}$. For a negative-definite spectrum the attractor is $\vect e_1$; for some mixed spectra, e.g.\ $\{-1,0.5,2\}$, no eigenmotion is stable. The contradictory sentences and the two opposite definitions of $V(\vect u)$ are removed. The statement that $V=\vect u\T\delta\mathbf T_{\rm th}\vect u$ increases monotonically is kept, for the positive-definite case, where it was confirmed numerically.
+
+\why (41) is not dimensionally a rate: with $[G]=1/$m, $[\varepsilon\delta\mathbf T_{\rm th}]=$\,N\,m$^2$, $[I_0]=$\,kg\,m$^2$, $[c_0]=$\,N\,m\,s it has units 1/(kg\,m$^2$\,s). Alignment is a second-order effect that requires the lag $I_0/c_0$. Its rate is $\sim g^2I_0\lambda^2/c_0^3$, while the precession frequency is $\sim g\lambda/c_0$. Nonlinear integration of (37) from random initial conditions confirms each case (positive spectrum $\to\vect e_3$, negative $\to\vect e_1$, mixed $\to$ no fixed point).
+
+\entry{C12}{Eq.~(42): neglected centripetal acceleration}
+\new Added: for a precessing body $\dot{\vect v}=\vect\Omega\times\vect v\neq0$. Neglecting it requires $M\Omega/\xi_0\ll1$, and the exact circular solution is reduced by $[1+(M\Omega_3/\xi_0)^2]^{-1/2}$.
+\why With this factor the quasi-steady radius agrees with direct integration of Eqs.~(23)--(26). The residual difference shrinks like $\varepsilon^2$.
+
+\entry{C13}{Eqs.~(44)--(49): levitation gradient and orbit radius}
+\old
+\[
+  v_Z=\frac{\gamma_0G-Mg}{\xi_0}+\varepsilon G(\delta\mathbf A)_{33},\quad \delta\mathbf A\equiv\frac{1}{\xi_0}(\delta\mathbf f_{\rm th}-A_0\delta\mathbf f_{\rm drag}),\quad
+  G=\frac{Mg}{\gamma_0+\varepsilon\xi_0(\delta\mathbf A)_{33}}=\frac{Mg}{\gamma_0}\big[1-\varepsilon A_0(\delta\mathbf A)_{33}\big],
+\]
+\[
+  \vect v^b=\varepsilon G_0\,\delta\mathbf A\,\vect u-\varepsilon G_0A_0(\delta\mathbf A)_{33}\vect u .
+\]
+\new
+\[
+  \delta\mathbf A\equiv\frac{1}{\xi_0}\delta\mathbf f_{\rm th},\qquad
+  G=\frac{Mg}{\gamma_0+\varepsilon\xi_0(\delta\mathbf A)_{33}}=\frac{Mg}{\gamma_0}\Big[1-\varepsilon\frac{(\delta\mathbf A)_{33}}{A_0}\Big]=\frac{Mg}{\gamma_0+\varepsilon(\delta\mathbf f_{\rm th})_{33}},
+\]
+\[
+  \vect v^b=\varepsilon G_0\,\delta\mathbf A\,\vect u-\varepsilon G_0(\delta\mathbf A)_{33}\vect u=\varepsilon G_0\,\Pi_u\delta\mathbf A\,\vect u,\qquad
+  R_{\rm orbit}=\frac{c_0\,|\Pi_{e_3}\,\delta\mathbf f_{\rm th}\,\vect e_3|}{\xi_0|\lambda_3|}.
+\]
+The hover condition (key feature~3) becomes ``$\vect e_3$ is also an eigenvector of $\delta\mathbf f_{\rm th}$''. $\delta\mathbf f_{\rm drag}$ plays no role. In Case~1 the drift is $\varepsilon G_0R\,\Pi_u\delta\mathbf A\,R\T\hat Z$.
+\why Eq.~(43) (correct) multiplies $\delta\mathbf f_{\rm drag}$ by $(\gamma_0G-Mg)$, which is $O(\varepsilon)$ near levitation. The drag term is therefore $O(\varepsilon^2)$. Definition (45) had replaced $(\gamma_0G-Mg)$ by $\gamma_0G$. Expanding the exact levitation condition $\vect u\cdot\mathbf f_{\rm drag}^{-1}(G\mathbf f_{\rm th}-Mg)\vect u=0$ in $\varepsilon$ gives $G=Mg/(\gamma_0+\varepsilon\,\delta f_{{\rm th},33})$. In v21, the two forms in (46) disagree unless $A_0=1$, and (47) gives $\vect u\cdot\vect v^b=\varepsilon G_0(\delta\mathbf A)_{33}(1-A_0)\neq0$, contrary to the text below it.
+
+\emph{Numerical confirmation.} For a random near-sphere with $\varepsilon=0.01$, direct integration of Eqs.~(23)--(26) on the steady precession gives $R_{\rm orbit}=0.2413$. The corrected (49) gives 0.2403, a 0.4\% difference that shrinks with $\varepsilon$. The v21 formula gives 0.1271 (47\% off), and its error does not shrink with $\varepsilon$.
+
+\entry{C14}{Eq.~(50): stress on a surface element}
+\old
+\[
+  \frac1A\begin{pmatrix}F_{t_1}\\F_{t_2}\\F_n\end{pmatrix}=\alpha\begin{pmatrix}0\\0\\-\frac12\sqrt{\pi/h}\end{pmatrix}-\alpha\begin{pmatrix}-\frac a2\vect v\cdot\hat t_1\\-\frac a2\vect v\cdot\hat t_2\\ [2-a(1-\pi/4)]\vect v\cdot\hat n\end{pmatrix}+\alpha\frac{3\nu}{4}\frac{T'}{T}\begin{pmatrix}\frac a2\sin\theta\\0\\(2-a)\cos\theta\end{pmatrix}.
+\]
+\new
+\[
+  \frac1A\begin{pmatrix}F_{t_1}\\F_{t_2}\\F_n\end{pmatrix}=\alpha\begin{pmatrix}0\\0\\-\frac12\sqrt{\pi/h}\end{pmatrix}-\alpha\begin{pmatrix}\frac a2\vect v\cdot\hat t_1\\\frac a2\vect v\cdot\hat t_2\\ [2-a(1-\pi/4)]\vect v\cdot\hat n\end{pmatrix}+\alpha\frac{3\nu}{4}\frac{T'}{T}\begin{pmatrix}-\frac a2\sin\theta\\0\\(2-a)\cos\theta\end{pmatrix},
+\]
+with $\vect v$ the element velocity relative to the gas and $\nu=\frac{4}{15}\kappa/(Nk_B)$, which is the kinematic viscosity for a monatomic gas.
+\why These stresses were derived independently from a Grad (13-moment) distribution carrying the heat flux $\vect q=\kappa T'\hat z$, with fraction $1-a$ of the re-emission specular and fraction $a$ diffuse at the gas temperature. The derivation reproduces the pressure, the normal drag, and the $2(2-a)/a$ ratio of the thermophoretic stresses exactly. Both tangential terms have the opposite sign to v21: the tangential drag opposes the motion, and the tangential thermophoretic stress points along $\vect q$, toward the cold side. Integrated over a sphere, the corrected stresses give Epstein's drag $\frac{4\pi}{3}R^2\rho\bar c(1+\pi a/8)$ and Waldmann's force $\frac{16\sqrt\pi}{15}R^2\kappa T'/\bar v$, independent of $a$. With the v21 signs the sphere force would be $(1-a)$ times Waldmann's and would vanish for diffuse reflection. The v21 cylinder formulas (52)--(53) are consistent only with the corrected signs.
+
+\entry{C15}{Eq.~(51): disk}
+\old $\alpha a\big(\vect v\cdot\hat t_1,\ \vect v\cdot\hat t_2,\ -2[2-a(1-\pi/4)]\vect v\cdot\hat n\big)+\alpha\frac{3\nu}{4}\frac{T'}{T}\big(a\sin\theta,0,2(2-a)\cos\theta\big)$.
+\new $-\alpha\big(a\,\vect v\cdot\hat t_1,\ a\,\vect v\cdot\hat t_2,\ 2[2-a(1-\pi/4)]\vect v\cdot\hat n\big)+\alpha\frac{3\nu}{4}\frac{T'}{T}\big(-a\sin\theta,0,2(2-a)\cos\theta\big)$.
+\why This is the sum of the corrected Eq.~(50) over the faces $\pm\hat n$. The tangential signs follow C14. The normal drag doubles to $-2\alpha[2-a(1-\pi/4)]\vect v\cdot\hat n$, without the extra factor $a$ of v21.
+
+\entry{C16}{Eqs.~(52)--(54): cylinder}
+\old $f=mN\pi rL/\sqrt h$; axis ``tilted at angle $\theta$ from the $X$-axis''; ``For $v=0$ and $\theta=0$ (cylinder axis along $Z$) the levitation force is \ldots''.
+\new $f=mN\sqrt\pi\,rL/\sqrt h=\alpha\pi rL$. The axis is $\hat a=(\cos\theta,0,-\sin\theta)$, tilted below the $X$-axis, and the opposite tilt flips both cross terms. $\theta=0$ is a horizontal cylinder, for which $F_Z=fB\,T'/T$; a vertical cylinder feels $F_Z=fD\,T'/T$. End caps are neglected ($L\gg r$).
+\why Integrating the corrected Eq.~(50) over the lateral surface reproduces all four coefficients $A,B,C,D$ of (52)--(53) exactly, with the prefactor $\alpha\pi rL$. That is $1/\sqrt\pi$ times the v21 $f$. Eq.~(55) is confirmed. Cross-check: the same stresses give the Garcia-Ybarra \& Rosner sphero-cylinder results quoted in Zheng (2002): about $+31\%$ drift speed parallel to the gradient at $L/r\approx15$, a few per cent slower perpendicular, and up to $12^\circ$ deflection.
+
+\entry{C17}{Eq.~(56): conversion between conventions}
+\old $\dfrac{2mN\pi\nu}{\sqrt h}=\dfrac{\eta\kappa}{\bar v}$. \new $\dfrac{2\sqrt\pi\,mN\nu}{\sqrt h}=\dfrac{\eta\kappa T}{\bar v}$.
+\why The v21 left side has units kg/s$^2$ and the right side kg/(s$^2$\,K). The corrected relation follows from equating the sphere force in both conventions, $F_o=2\pi\alpha\nu R^2T'/T=\eta\kappa R^2T'/\bar v$, and it holds identically with the kinetic value of $\nu$. $\eta=16\sqrt\pi/15$ is confirmed.
+
+\entry{C18}{Eq.~(58): conductivity in Waldmann's formula}
+\new Added a remark: Waldmann's result involves the translational conductivity, $\kappa_{\rm tr}=\frac{15}{4}(k_B/m)\mu\approx0.020$\,W/(m\,K) for air. Using it instead of the total $\kappa=0.026$\,W/(m\,K) would lower $F_T$ by about 25\%.
+
+\entry{C19}{Eqs.~(60)--(62), Table 2 and conclusions: rotational drag and gyrophoretic force}
+\old $C_r=(8\pi/15)(P/\bar v)\ell^4\approx4.3\times10^{-19}$\,N\,m\,s; $\omega_{\rm ss}\approx4.4\times10^4$\,rad/s; $F_\omega\approx1.5\times10^{-9}$\,N;
+\[
+  \frac{F_\omega}{F_T}=\frac{\eta\kappa T}{\bar v}\frac{8\pi}{15P\ell}\approx3Kn\approx1.6 .
+\]
+\new $C_r=\frac{2\pi}{3}\rho\bar c\,\ell^4=\frac{8\sqrt\pi}{3}\frac{P}{\bar v}\ell^4\approx1.2\times10^{-18}$\,N\,m\,s; $\omega_{\rm ss}\approx1.6\times10^4$\,rad/s ($\approx7.5\times10^{-4}\bar v/\ell$); $F_\omega\approx5.3\times10^{-10}$\,N;
+\[
+  \frac{F_\omega}{F_T}=\frac{\eta\kappa T}{\bar v}\frac{3}{8\sqrt\pi\,P\ell}\approx0.56=\frac{45\eta}{32\pi}Kn\ (\kappa=\kappa_{\rm tr})\approx0.85\,Kn .
+\]
+Table~2 and conclusions 2--3 are updated: $F_\omega/F_T\approx0.56$, $\omega_{\rm ss}\ell/\bar v\approx8\times10^{-4}$, and $v/\bar v\approx3\times10^{-4}$ with Epstein drag.
+\why For diffuse re-emission, each molecule striking a rotating sphere leaves with the local wall velocity. The resulting tangential momentum flux $\frac14n\bar c\,m\,\vect V_{\rm wall}$ gives the torque $-\frac{2\pi}{3}\rho\bar c R^4\vect\omega$. The same result follows from integrating the tangential drag stress of Eq.~(50). This is $2.8$ times the v21 coefficient. Separately, the printed analytic form of (62) has $8\pi/15$ inverted: substituting the v21 $C_r$ into $F_T\ell/(|\nabla\ln T|\bar vC_r)$ gives $15/(8\pi P\ell)$, which reproduces the stated 1.6. The printed $8\pi/(15P\ell)$ would give 4.5. The qualitative conclusion stands: the gyrophoretic force of a strongly non-spherical particle is comparable to $F_T$ in the transition regime.
+
+\section*{Statements confirmed without change}
+For completeness, these were verified as written:
+\begin{itemize}
+  \item the frame conventions and orthogonality of $R(\vect q)$, Eq.~(3);
+  \item the dimensions in (11) and the DOF count of 27;
+  \item the equations of motion (12)--(15), including $R\widehat{\vect\omega}R\T=\widehat{R\vect\omega}$;
+  \item the gyroscopic term (16);
+  \item the quaternion relations (18)--(21), including that (21) reproduces (14);
+  \item a full numerical integration of (23)--(26), with exact energy balance;
+  \item the DOF counts of (27), (28) and (30), and the vanishing of $\mathbf T_{\rm th}$ for three mirror planes;
+  \item Eqs.~(35)--(40): the reduced dynamics and the steady eigenmotions;
+  \item Eqs.~(42)--(43);
+  \item the horizontal circular orbit of Case~3;
+  \item the cylinder coefficients $A$--$D$ and Eq.~(55);
+  \item all numerical values in (57)--(59) and (61) as computed from the v21 inputs;
+  \item $\ell/L_T\approx1.3\times10^{-3}$.
+\end{itemize}
+
+\end{document}

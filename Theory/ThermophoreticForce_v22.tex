@@ -1,0 +1,503 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1.05in, marginparwidth=0.6in, marginparsep=0.12in]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black]{hyperref}
+
+% margin flag pointing to the corresponding entry of ThermophoreticForce_v22_corrections.pdf
+\newcommand{\chg}[1]{\marginpar{\raggedright\footnotesize\textcolor{red!70!black}{\textsf{#1}}}}
+\newcommand{\vect}[1]{\bm{#1}}
+\newcommand{\T}{^{\!\top}}
+\newtcolorbox{eqbox}[1]{colback=white, colframe=black, boxrule=0.5pt, arc=0pt, left=4pt, right=4pt, top=2pt, bottom=2pt, fonttitle=\bfseries, coltitle=black, colbacktitle=white, title={#1}, toptitle=2pt}
+
+\title{Notes on Thermophoretic Force}
+\author{Cheng Chin}
+\date{February 2026 \\[2pt] \small v22 (September 2026): corrected version of v21. Changes are flagged in the margin (C1, C2, \ldots) \\ \small and listed in \emph{ThermophoreticForce\_v22\_corrections.pdf}.}
+
+\begin{document}
+\maketitle
+
+%======================================================================
+\section{General formalism for rigid-body motion in a thermal gas cell}
+%======================================================================
+The disk and cylinder examples in Sections~4 and~5 exploit specific geometric symmetries to simplify the force expressions.\chg{C1} In this section we derive the equations of motion for a rigid body of completely arbitrary shape, making no symmetry assumption. The only assumption throughout Sections~1.1--1.6 is that gravity acts along $-\hat Z$. The temperature gradient $\nabla T$ is treated as a general vector with arbitrary direction. Symmetric bodies such as cylinders and spheroids emerge as special cases of this formulation, which are discussed in Section~1.7.
+
+\subsection{Reference frames, rotation matrix, and inertia tensor}
+\paragraph{Lab frame.} We work in a fixed inertial frame $(\hat X,\hat Y,\hat Z)$. The only assumption placed on the external fields is that gravity acts along $-\hat Z$:
+\begin{equation}
+  \vect g = -g\,\hat Z .
+\end{equation}
+The macroscopic temperature gradient $\nabla T$ is a prescribed vector field in the lab frame. No assumption is made about its direction.
+
+\paragraph{Body frame and inertia tensor.} We attach a frame $(\hat e_1,\hat e_2,\hat e_3)$ to the rigid body with its origin at the centre of mass (CoM), aligned with the principal axes of inertia so that the inertia tensor is diagonal:
+\begin{equation}
+  \mathbf I = \begin{pmatrix} I_1 & 0 & 0\\ 0 & I_2 & 0\\ 0 & 0 & I_3\end{pmatrix},
+\end{equation}
+where $I_1,I_2,I_3$ are the three principal moments of inertia. In general all three are distinct, $I_1\neq I_2\neq I_3$.
+
+\paragraph{Rotation matrix.} The instantaneous orientation of the body is described by the rotation matrix $R\in\mathrm{SO}(3)$, defined so that a vector $\vect u$ with components in the body frame has lab-frame components $\vect u=R\vect u^b$, with inverse $\vect u^b=R\T\vect u$. In particular, the temperature gradient and the CoM velocity in the body frame are
+\begin{equation}
+  (\nabla T)^b = R\T\nabla T, \qquad \vect v^b = R\T\vect v,
+\end{equation}
+where $\vect v=\dot{\vect x}$ is the lab-frame CoM velocity. The evolution of $R$ in time is governed by the quaternion kinematics derived in Section~1.5.
+
+\subsection{Gas-interaction tensors for an arbitrary shape}
+In the low-velocity, small-temperature-gradient limit all forces and torques respond linearly to their driving fields. We introduce four tensors in the natural order: the two forces (from temperature gradient and from velocity) followed by the two torques (from temperature gradient and from angular velocity).
+
+\paragraph{Thermophoretic force tensor $\mathbf f_{\rm th}$ (taken symmetric, 6 DOF).}\chg{C2} Thermophoresis drives particles from hot toward cold. The tensor $\mathbf f_{\rm th}$ relates the temperature gradient to the thermophoretic force in the body frame:
+\begin{equation}
+  \vect F^b_{\rm th} = -\mathbf f_{\rm th}\,(\nabla\ln T)^b, \qquad
+  \mathbf f_{\rm th} = \begin{pmatrix} f_{11} & f_{12} & f_{13}\\ f_{12} & f_{22} & f_{23}\\ f_{13} & f_{23} & f_{33}\end{pmatrix}.
+\end{equation}
+We take $\mathbf f_{\rm th}$ symmetric positive-definite (6 DOF). This is an assumption: no reciprocity argument requires it, and a chiral body may have an antisymmetric part (Section~1.7). The off-diagonal entry $f_{ij}$ means a gradient along $\hat e_j$ drives a force component along $\hat e_i$.
+
+\paragraph{Drag force tensor $\mathbf f_{\rm drag}$ (symmetric, 6 DOF).} The tensor $\mathbf f_{\rm drag}$ relates the CoM velocity to the drag force in the body frame:
+\begin{equation}
+  \vect F^b_{\rm drag} = -\mathbf f_{\rm drag}\,\vect v^b, \qquad
+  \mathbf f_{\rm drag} = \begin{pmatrix} d_{11} & d_{12} & d_{13}\\ d_{12} & d_{22} & d_{23}\\ d_{13} & d_{23} & d_{33}\end{pmatrix}.
+\end{equation}
+$\mathbf f_{\rm drag}$ is symmetric (by Onsager/Lorentz reciprocity) and positive-definite: only the symmetric part contributes to the drag power $P=-\vect v\T\mathbf f_{\rm drag}\vect v$, and $P<0$ for all $\vect v$ forces that symmetric part to be positive-definite.\chg{C2}
+
+\paragraph{Thermophoretic torque tensor $\mathbf T_{\rm th}$ (9 DOF).} The temperature gradient can exert a net torque on a non-symmetric body:
+\begin{equation}
+  \vect\tau^b_{\rm th} = -\mathbf T_{\rm th}\,(\nabla\ln T)^b, \qquad
+  \mathbf T_{\rm th} = \begin{pmatrix} t_{11} & t_{12} & t_{13}\\ t_{21} & t_{22} & t_{23}\\ t_{31} & t_{32} & t_{33}\end{pmatrix}.
+\end{equation}
+$\mathbf T_{\rm th}$ is in general a full $3\times3$ matrix (9 DOF) with no symmetry required. It maps a polar vector to an axial vector (a pseudotensor), so for bodies with three mutually perpendicular mirror planes $\mathbf T_{\rm th}=0$.
+
+\paragraph{Rotational drag tensor $\mathbf T_{\rm drag}$ (symmetric, 6 DOF).} The tensor $\mathbf T_{\rm drag}$ relates angular velocity to the resistive torque in the body frame:
+\begin{equation}
+  \vect\tau^b_{\rm drag} = -\mathbf T_{\rm drag}\,\vect\omega^b, \qquad
+  \mathbf T_{\rm drag} = \begin{pmatrix} r_{11} & r_{12} & r_{13}\\ r_{12} & r_{22} & r_{23}\\ r_{13} & r_{23} & r_{33}\end{pmatrix}.
+\end{equation}
+$\mathbf T_{\rm drag}$ is symmetric positive-definite (6 DOF) by the same reciprocity and dissipation arguments as $\mathbf f_{\rm drag}$.
+
+\subsection{Force and torque summary}
+The total force and torque on the body in the body frame are:
+\begin{align}
+  \vect F^b &= \vect F^b_{\rm th}+\vect F^b_{\rm drag} = -\mathbf f_{\rm th}(\nabla\ln T)^b-\mathbf f_{\rm drag}\vect v^b,\\
+  \vect\tau^b &= \vect\tau^b_{\rm th}+\vect\tau^b_{\rm drag} = -\mathbf T_{\rm th}(\nabla\ln T)^b-\mathbf T_{\rm drag}\vect\omega^b.
+\end{align}
+These four tensors and their three driving fields can be collected into a single linear response:\chg{C3}
+\begin{equation}
+  \begin{pmatrix}\vect F^b\\ \vect\tau^b\end{pmatrix}
+  = -\begin{pmatrix}\mathbf f_{\rm th} & \mathbf f_{\rm drag} & 0\\ \mathbf T_{\rm th} & 0 & \mathbf T_{\rm drag}\end{pmatrix}
+  \begin{pmatrix}(\nabla\ln T)^b\\ \vect v^b\\ \vect\omega^b\end{pmatrix}.
+\end{equation}
+The driving fields are $\nabla\ln T$, $\vect v$ and $\vect\omega$. The zero blocks omit the translation--rotation couplings: the gyrophoretic force produced by rotation, and the torque produced by translation. These are discussed in Sections~2.1 and~6. The four blocks have different physical dimensions:
+\begin{equation}
+  [\mathbf f_{\rm th}] = F\cdot L,\quad [\mathbf f_{\rm drag}] = F\cdot T/L,\quad [\mathbf T_{\rm th}] = F\cdot L^2,\quad [\mathbf T_{\rm drag}] = F\cdot L^2\cdot T/L.
+\end{equation}
+The total DOF for a body of arbitrary shape is $6+6+9+6=27$ (plus 6 for the inertia tensor). See Section~1.7 for how symmetry reduces this.
+
+\subsection{Equations of motion}
+Substituting the forces~(8) and torques~(9) into Newton's second law and Euler's equation, and expressing $(\nabla\ln T)^b=R\T\nabla\ln T$, $\vect v^b=R\T\vect v$, the complete equations of motion for the state $(\vect x,\vect v,R,\vect\omega^b)$ are:
+\begin{eqbox}{Equations of motion}
+\begin{align}
+  \dot{\vect x} &= \vect v,\\
+  M\dot{\vect v} &= -Mg\,\hat Z - R\big[\mathbf f_{\rm th}R\T\nabla\ln T+\mathbf f_{\rm drag}R\T\vect v\big],\\
+  \dot R &= R\,\widehat{\vect\omega}^b,\\
+  \mathbf I\dot{\vect\omega}^b &= -\vect\omega^b\times(\mathbf I\vect\omega^b)-\mathbf T_{\rm th}R\T\nabla\ln T-\mathbf T_{\rm drag}\vect\omega^b.
+\end{align}
+\end{eqbox}
+Here $\widehat{\vect a}$ denotes the $3\times3$ skew-symmetric matrix associated with a vector $\vect a$, defined by $\widehat{\vect a}\vect u=\vect a\times\vect u$ for all $\vect u$, with entries $\widehat a_{ij}=-\varepsilon_{ijk}a_k$. In~(13) gravity acts downward ($-\hat Z$) and the temperature gradient $\nabla T$ is also taken along $-\hat Z$ (hot below, cold above),\chg{C4} so the thermophoretic force $-\mathbf f_{\rm th}R\T\nabla\ln T$ points upward and can levitate the particle. Equation~(14) is equivalent to the lab-frame form $\dot R=\widehat{\vect\omega}^{\rm lab}R$ with $\vect\omega^{\rm lab}=R\vect\omega^b$.
+
+\paragraph{Gyroscopic term.} The term $\vect\omega^b\times(\mathbf I\vect\omega^b)$ in Eq.~(15) is the gyroscopic (Euler) term arising from the non-inertial body frame:
+\begin{equation}
+  \vect\omega^b\times(\mathbf I\vect\omega^b) = \begin{pmatrix}(I_3-I_2)\,\omega^b_2\omega^b_3\\ (I_1-I_3)\,\omega^b_3\omega^b_1\\ (I_2-I_1)\,\omega^b_1\omega^b_2\end{pmatrix}.
+\end{equation}
+It vanishes for a sphere ($I_1=I_2=I_3$) and when $\vect\omega^b$ is parallel to a principal axis.
+
+\paragraph{Practical implementation.} For numerical integration, $R\in\mathrm{SO}(3)$ is represented by a unit quaternion $\vect q$ to avoid the gimbal-lock singularity of Euler angles. Equation~(14) then becomes $\dot{\vect q}=\tfrac12 Q(\vect q)\vect\omega^b$ (see Section~1.5).
+
+\subsection{Attitude kinematics --- quaternion representation}
+Euler angles develop a coordinate singularity (gimbal lock) at pitch $\pm90^\circ$. We instead represent the orientation by a unit quaternion
+\begin{equation}
+  \vect q=(q_0,q_1,q_2,q_3)\in\mathbb R^4,\qquad |\vect q|^2\equiv q_0^2+q_1^2+q_2^2+q_3^2=1.
+\end{equation}
+The scalar part is $q_0=\cos(\psi/2)$ and the vector part is $\vec q=(q_1,q_2,q_3)=\hat k\sin(\psi/2)$, where $\hat k$ is the unit rotation axis and $\psi$ is the rotation angle.
+
+\paragraph{Rotation matrix from quaternion.}
+\begin{equation}
+  R(\vect q) = (q_0^2-|\vec q|^2)\mathbf I_3+2\vec q\,\vec q\T+2q_0\,\widehat{\vec q},\qquad
+  \widehat{\vec q}=\begin{pmatrix}0 & -q_3 & q_2\\ q_3 & 0 & -q_1\\ -q_2 & q_1 & 0\end{pmatrix}.
+\end{equation}
+
+\paragraph{Explicit axis-angle form.}
+\begin{equation}
+  R(\hat k,\psi) = \cos\psi\,\mathbf I_3+(1-\cos\psi)\,\hat k\hat k\T+\sin\psi\,\widehat{\hat k},
+\end{equation}
+with $c\equiv\cos\psi$, $s\equiv\sin\psi$:
+\begin{equation}
+  R(\hat k,\psi) = \begin{pmatrix}
+    k_1^2(1-c)+c & k_1k_2(1-c)-k_3s & k_1k_3(1-c)+k_2s\\
+    k_1k_2(1-c)+k_3s & k_2^2(1-c)+c & k_2k_3(1-c)-k_1s\\
+    k_1k_3(1-c)-k_2s & k_2k_3(1-c)+k_1s & k_3^2(1-c)+c\end{pmatrix}.
+\end{equation}
+
+\paragraph{Kinematic differential equation.}
+\begin{equation}
+  \dot{\vect q}=\tfrac12 Q(\vect q)\vect\omega^b,\qquad
+  Q(\vect q)=\begin{pmatrix}-q_1 & -q_2 & -q_3\\ q_0 & -q_3 & q_2\\ q_3 & q_0 & -q_1\\ -q_2 & q_1 & q_0\end{pmatrix}.
+\end{equation}
+Equation~(21) conserves $|\vect q|$ exactly, since $\vect q\cdot Q(\vect q)\vect\omega=0$; to prevent numerical drift, $\vect q$ is nonetheless renormalised after each integration step: $\vect q\leftarrow\vect q/|\vect q|$.
+
+\subsection{State-vector formulation}
+The complete dynamical state of the rigid body is encoded in 13 scalar variables:
+\begin{equation}
+  \vect s = \big(\underbrace{\vect x}_{3},\underbrace{\vect v}_{3},\underbrace{\vect q}_{4},\underbrace{\vect\omega^b}_{3}\big)\in\mathbb R^{13}.
+\end{equation}
+\begin{eqbox}{Complete equations of motion (quaternion form)}
+State vector: $\vect s=(\vect x,\vect v,\vect q,\vect\omega^b)\in\mathbb R^{13}$. \quad Orientation: $R(\vect q)$ from Eq.~(18).
+\begin{align}
+  \dot{\vect x} &= \vect v,\\
+  M\dot{\vect v} &= -Mg\,\hat Z - R(\vect q)\big[\mathbf f_{\rm th}R(\vect q)\T\nabla\ln T+\mathbf f_{\rm drag}R(\vect q)\T\vect v\big],\\
+  \dot{\vect q} &= \tfrac12 Q(\vect q)\vect\omega^b,\\
+  \mathbf I\dot{\vect\omega}^b &= -\vect\omega^b\times(\mathbf I\vect\omega^b)-\mathbf T_{\rm th}R(\vect q)\T\nabla\ln T-\mathbf T_{\rm drag}\vect\omega^b.
+\end{align}
+Renormalise after each step: $\vect q\leftarrow\vect q/|\vect q|$.
+\end{eqbox}
+
+\subsection{Tensor simplification by geometric symmetry}
+The 27 DOF of a generic body reduce dramatically when the body has geometric symmetry. We organise the simplification into three levels, from most general to most symmetric.
+
+\paragraph{Level 1 --- Generic asymmetric body (27 DOF).} All four tensors are full matrices with their maximum DOF:
+\begin{equation}
+  \mathbf f_{\rm th}:6,\quad \mathbf f_{\rm drag}:6,\quad \mathbf T_{\rm th}:9,\quad \mathbf T_{\rm drag}:6.
+\end{equation}
+Examples: a helix, an asymmetric two-sphere aggregate, any body lacking mirror-plane symmetry. The thermophoretic torque $\mathbf T_{\rm th}\neq0$ drives steady rotation and, via the coupling to translation, circular orbits (Sections~2.2--2.3).\chg{C5}
+
+\paragraph{Level 2 --- Three mutually perpendicular mirror planes (9 DOF).}\chg{C6} The mirror symmetry cancels all off-diagonal elements of $\mathbf f_{\rm th}$, $\mathbf f_{\rm drag}$, $\mathbf T_{\rm drag}$, and forces $\mathbf T_{\rm th}=0$ (Garcia-Ybarra \& Rosner 1989):
+\begin{equation}
+  \mathbf f_{\rm th}=\mathrm{diag}(f_1,f_2,f_3),\quad \mathbf f_{\rm drag}=\mathrm{diag}(d_1,d_2,d_3),\quad \mathbf T_{\rm drag}=\mathrm{diag}(r_1,r_2,r_3),\quad \mathbf T_{\rm th}=0.
+\end{equation}
+DOF: $3+3+0+3=9$. Bodies in this class: spheroids, cylinders, disks, rectangular blocks. With $\mathbf T_{\rm th}=0$ there is no thermophoretic torque; the particle drifts without spinning.
+
+\paragraph{Level 3a --- Uniaxial with a perpendicular mirror plane, $D_{\infty h}$ (6 DOF).}\chg{C7} With a single symmetry axis $\hat e_3$ and a mirror plane perpendicular to it, the two transverse directions are equivalent: $f_1=f_2\equiv f_\perp$, $f_3\equiv f_\parallel$ (and similarly for $\mathbf f_{\rm drag}$, $\mathbf T_{\rm drag}$), and $\mathbf T_{\rm th}=0$:
+\begin{equation}
+  \mathbf f_{\rm th}=\mathrm{diag}(f_\perp,f_\perp,f_\parallel),\quad
+  \mathbf f_{\rm drag}=\mathrm{diag}(d_\perp,d_\perp,d_\parallel),\quad
+  \mathbf T_{\rm drag}=\mathrm{diag}(r_\perp,r_\perp,r_\parallel).
+\end{equation}
+DOF: $2+2+0+2=6$. Bodies: cylinders, spheroids.
+
+A body of revolution \emph{without} the perpendicular mirror plane, such as a cone or a Janus sphere (group $C_{\infty v}$), has the same forms for $\mathbf f_{\rm th}$, $\mathbf f_{\rm drag}$ and $\mathbf T_{\rm drag}$. Its thermophoretic torque, however, has one invariant, an antisymmetric part ($[\vect a]_\times\equiv\widehat{\vect a}$):
+\begin{equation}
+  \mathbf T_{\rm th} = \lambda_a\,[\hat e_3]_\times \qquad \Longrightarrow \qquad \vect\tau^b_{\rm th} = -\lambda_a\,\hat e_3\times(\nabla\ln T)^b \qquad (C_{\infty v},\ 7\ \text{DOF}). \tag{29a}
+\end{equation}
+This torque aligns the symmetry axis with the gradient.
+
+\paragraph{Level 3b --- Sphere, SO(3) symmetry (3 DOF).} Full isotropy collapses every tensor to a scalar multiple of $\mathbf I_3$:
+\begin{equation}
+  \mathbf f_{\rm th}=f_0\mathbf I_3,\quad \mathbf f_{\rm drag}=d_0\mathbf I_3,\quad \mathbf T_{\rm drag}=r_0\mathbf I_3,\quad \mathbf T_{\rm th}=0,\quad I_1=I_2=I_3.
+\end{equation}
+DOF: $1+1+0+1=3$. The gyroscopic term vanishes, the rotational equation decouples from translation, and the thermophoretic force reduces to $\vect F_{\rm th}=-f_0\nabla\ln T$, consistent with Waldmann's free-molecule result for $f_0=\eta\kappa\ell^2T/\bar v$ (Section~6).\chg{C8}
+
+\begin{table}[h]
+\centering
+\caption{Degrees of freedom by symmetry class (excluding the inertia tensor). $\mathbf T_{\rm th}$ counts 9 DOF when non-zero since no symmetry argument forces it to be symmetric.}
+\begin{tabular}{lrrrrr}
+\toprule
+Body & $\mathbf f_{\rm th}$ & $\mathbf f_{\rm drag}$ & $\mathbf T_{\rm th}$ & $\mathbf T_{\rm drag}$ & Total\\
+\midrule
+Generic asymmetric & 6 & 6 & 9 & 6 & 27\\
+Three mirror planes ($D_{2h}$) & 3 & 3 & 0 & 3 & 9\\
+Polar uniaxial ($C_{\infty v}$) & 2 & 2 & 1 & 2 & 7\\
+Uniaxial, end-to-end symmetric ($D_{\infty h}$) & 2 & 2 & 0 & 2 & 6\\
+Sphere (SO(3)) & 1 & 1 & 0 & 1 & 3\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%======================================================================
+\section{Near-sphere perturbation theory}
+%======================================================================
+The general equations of motion in Section~1 contain four tensors with up to 27 independent parameters.\chg{C9} For a particle that is nearly spherical, the deviation from sphere symmetry is small and the tensors can be expanded perturbatively. This approach gives analytical insight into how shape asymmetry couples translation to rotation, and predicts a distinctive circular orbit that is absent for a perfect sphere.
+
+\subsection{Perturbative expansion of the tensors}
+Let $\varepsilon\ll1$ be a dimensionless measure of the deviation from spherical symmetry (e.g.\ the fractional difference between the longest and shortest semi-axes). We expand each tensor around its spherical value.
+
+\paragraph{Thermophoretic force tensor.} For a sphere $\mathbf f_{\rm th}=\gamma_0\mathbf I_3$ with $\gamma_0=\eta(\kappa/\bar v)\ell^2T$.\chg{C8} A near-sphere breaks the three-fold degeneracy and, for a generic asymmetric shape, also introduces off-diagonal couplings. The full $O(\varepsilon)$ expansion is therefore a complete symmetric $3\times3$ matrix:
+\begin{equation}
+  \mathbf f_{\rm th}=\gamma_0\mathbf I_3+\varepsilon\,\delta\mathbf f_{\rm th},\qquad
+  \delta\mathbf f_{\rm th}=\gamma_0\begin{pmatrix}g_{11} & g_{12} & g_{13}\\ g_{12} & g_{22} & g_{23}\\ g_{13} & g_{23} & g_{33}\end{pmatrix},\qquad g_{11}+g_{22}+g_{33}=0,
+\end{equation}
+where $g_{ij}=O(1)$. Off-diagonal entries $g_{ij}$ ($i\neq j$) mean that a temperature gradient along $\hat e_j$ produces a thermophoretic force component along $\hat e_i$. Tracelessness is a convention: it defines $\gamma_0$ as the mean response.
+
+\paragraph{Resistance and rotational drag tensors.} By the same argument, $\mathbf f_{\rm drag}$ and $\mathbf T_{\rm drag}$ each acquire a full symmetric $O(\varepsilon)$ correction:
+\begin{equation}
+  \mathbf f_{\rm drag}=\xi_0\mathbf I_3+\varepsilon\,\delta\mathbf f_{\rm drag},\qquad
+  \mathbf T_{\rm drag}=c_0\mathbf I_3+\varepsilon\,\delta\mathbf T_{\rm drag},
+\end{equation}
+where $\delta\mathbf f_{\rm drag}$ and $\delta\mathbf T_{\rm drag}$ are symmetric traceless $3\times3$ matrices.
+
+\paragraph{Thermophoretic torque tensor.} For a perfect sphere $\mathbf T_{\rm th}=0$. For a near-sphere the broken symmetry produces a non-zero thermophoretic torque at $O(\varepsilon)$:
+\begin{equation}
+  \mathbf T_{\rm th}=\varepsilon\,\delta\mathbf T_{\rm th},\qquad \delta\mathbf T_{\rm th}=O(1)\ \text{(general $3\times3$ matrix)}.
+\end{equation}
+Both diagonal and off-diagonal entries are generically non-zero.
+
+\paragraph{Note on gyrophoretic coupling.}\chg{C10} No experimental evidence currently constrains the gyrophoretic coupling, i.e.\ the force produced by rotation. For a near-sphere the coupling is $O(\varepsilon)$ and the steady spin is also $O(\varepsilon)$ (Section~2.2), so the gyrophoretic force is $O(\varepsilon^2)$ and is neglected in this section. Section~6 estimates it for a strongly non-spherical particle ($\varepsilon\sim1$).
+
+\paragraph{Summary of orders (to leading order in $\varepsilon$).} Collecting Eqs.~(31)--(33):
+\begin{equation}
+  \boxed{\ \mathbf f_{\rm th}=f_0\mathbf I_3+\varepsilon\,\delta\mathbf f_{\rm th},\quad
+  \mathbf f_{\rm drag}=d_0\mathbf I_3+\varepsilon\,\delta\mathbf f_{\rm drag},\quad
+  \mathbf T_{\rm th}=\varepsilon\,\delta\mathbf T_{\rm th},\quad
+  \mathbf T_{\rm drag}=r_0\mathbf I_3+\varepsilon\,\delta\mathbf T_{\rm drag}.\ }
+\end{equation}
+Here $f_0\equiv\gamma_0$, $d_0\equiv\xi_0$, $r_0\equiv c_0$ are the scalar sphere values, and the four correction tensors $\delta\mathbf f_{\rm th}$, $\delta\mathbf f_{\rm drag}$, $\delta\mathbf T_{\rm th}$, $\delta\mathbf T_{\rm drag}$ are defined in Eqs.~(31)--(33) above. At $O(\varepsilon^0)$ each tensor is isotropic; all anisotropy and the thermophoretic torque enter at $O(\varepsilon)$ through these corrections.
+
+\subsection{Rotational dynamics and orientation selection}
+\paragraph{Equations of motion for $(\vect\omega^b,R)$.} For a near-sphere ($\mathbf I=I_0\mathbf I_3+O(\varepsilon)$) the Euler equation~(15) in the body frame, keeping only $O(\varepsilon)$ terms, is:
+\begin{align}
+  I_0\dot{\vect\omega}^b &= G\varepsilon\,\delta\mathbf T_{\rm th}R\T\hat Z-c_0\vect\omega^b+O(\varepsilon^2),\\
+  \dot R &= R\,\widehat{\vect\omega}^b,
+\end{align}
+where we substituted $(\nabla\ln T)^b=R\T\nabla\ln T=-GR\T\hat Z$ (with $G=|\nabla\ln T|=|\nabla T|/T>0$ and $\nabla\ln T=-G\hat Z$ pointing downward), so that $-\delta\mathbf T_{\rm th}(\nabla\ln T)^b=+G\,\delta\mathbf T_{\rm th}R\T\hat Z$. We dropped the gyroscopic term $\vect\omega^b\times(I_0\vect\omega^b)$, which is $O(\varepsilon^2)$ since $\vect\omega^b=O(\varepsilon)$. Equations~(35)--(36) together form a closed system for $(\vect\omega^b,R)\in\mathbb R^3\times\mathrm{SO}(3)$.
+
+\paragraph{Reduced form via $\vect u=R\T\hat Z$.} It is convenient to project onto the body-frame gradient direction $\vect u\equiv R\T\hat Z$, $|\vect u|=1$. Differentiating Eq.~(36): $\dot{\vect u}=\dot R\T\hat Z=-\widehat{\vect\omega}^b\vect u=-\vect\omega^b\times\vect u$. Equations~(35)--(36) reduce to:
+\begin{equation}
+  I_0\dot{\vect\omega}^b=G\varepsilon\,\delta\mathbf T_{\rm th}\vect u-c_0\vect\omega^b,\qquad \dot{\vect u}=-\vect\omega^b\times\vect u,
+\end{equation}
+a closed 6-DOF ODE on $\mathbb R^3\times S^2$, exact to $O(\varepsilon)$. Once $\vect u(t)$ is known, $R(t)$ can be recovered by integrating Eq.~(36).
+
+\paragraph{Steady states: eigenvalue problem.} Setting $\dot{\vect\omega}^b=0$ and $\dot{\vect u}=0$ in Eq.~(37):
+\begin{equation}
+  c_0\vect\omega^b=G\varepsilon\,\delta\mathbf T_{\rm th}\vect u,\qquad \vect\omega^b\times\vect u=0.
+\end{equation}
+The second condition requires $\vect\omega^b\parallel\vect u$. Substituting into the first:
+\begin{equation}
+  \delta\mathbf T_{\rm th}\vect u=\lambda\vect u,\qquad \vect\omega^b=\frac{G\varepsilon\lambda}{c_0}\vect u.
+\end{equation}
+The steady-state body-frame gradient $\vect u$ must be an eigenvector of $\delta\mathbf T_{\rm th}$ with eigenvalue $\lambda$. For a general $3\times3$ matrix $\delta\mathbf T_{\rm th}$ there are three such eigenmotions.
+
+\paragraph{The three eigenmotions in the lab frame.} Let $\{\vect e_1,\vect e_2,\vect e_3\}$ be the eigenvectors of $\delta\mathbf T_{\rm th}$ with real eigenvalues $\lambda_1\le\lambda_2\le\lambda_3$. Real eigenvalues exist when $\delta\mathbf T_{\rm th}$ is symmetric; for a non-symmetric matrix the analysis extends to the real Schur form. Each eigenvector defines a distinct steady state. At the fixed point $\vect u=\vect e_k$ we have $R\T\hat Z=\vect e_k$, equivalently $R\vect e_k=\hat Z$: the body orients so that its $\vect e_k$-axis aligns with the vertical (the temperature-gradient direction).
+
+From Eq.~(39) the angular velocity in the body frame is $\vect\omega^b_k=(G\varepsilon\lambda_k/c_0)\vect e_k$, a spin about the body axis $\vect e_k$. Transforming to the lab frame gives
+\begin{equation}
+  \vect\Omega_k=R\vect\omega^b_k=\frac{G\varepsilon\lambda_k}{c_0}R\vect e_k=\frac{G\varepsilon\lambda_k}{c_0}\hat Z.
+\end{equation}
+The lab-frame angular velocity is exactly along $\hat Z$ for all three eigenmotions --- this is a direct consequence of the fixed-point geometry $R\vect e_k=\hat Z$. Physically, the body spins about the temperature-gradient direction.
+
+\paragraph{Stability of the three eigenmotions.}\chg{C11} Linearise Eq.~(37) about the fixed point $(\vect\omega^b,\vect u)=(G\varepsilon\lambda_k\vect e_k/c_0,\ \vect e_k)$ in the eigenbasis of a symmetric $\delta\mathbf T_{\rm th}$, and write $g\equiv G\varepsilon$ and $j,l$ for the other two indices. The perturbation along $\vect e_k$ is neutral (the constraint $|\vect u|=1$), and the axial spin relaxes at rate $c_0/I_0$. The transverse deviation $\delta\vect u=\sum_{j\neq k}\delta u_j\vect e_j$ obeys the quartic characteristic equation
+\begin{equation}
+  c_0^2I_0^2s^4+2c_0^3I_0\,s^3+\big(c_0^4+g^2I_0^2\lambda_k^2\big)s^2+c_0g^2I_0\lambda_k(2\lambda_k-\lambda_j-\lambda_l)\,s+c_0^2g^2(\lambda_k-\lambda_j)(\lambda_k-\lambda_l)=0 .
+\end{equation}
+Its Routh--Hurwitz conditions give the exact stability criterion. For weak inertia ($gI_0|\lambda|/c_0^2\ll1$) the transverse motion is a slow precession of $\vect u$ about $\vect e_k$,
+\begin{equation}
+  s \simeq \pm i\,\frac{g}{c_0}\sqrt{(\lambda_k-\lambda_j)(\lambda_k-\lambda_l)}\;-\;\frac{g^2I_0}{2c_0^3}\Big[\lambda_j(\lambda_k-\lambda_l)+\lambda_l(\lambda_k-\lambda_j)\Big], \tag{41a}
+\end{equation}
+so the fixed point $\vect e_k$ is stable if and only if
+\begin{equation}
+  \text{(a)}\ (\lambda_k-\lambda_j)(\lambda_k-\lambda_l)>0 \qquad\text{and}\qquad \text{(b)}\ \lambda_j(\lambda_k-\lambda_l)+\lambda_l(\lambda_k-\lambda_j)>0 . \tag{41b}
+\end{equation}
+Condition~(a) excludes the middle eigenvector $\vect e_2$, which is always a saddle. Condition~(b) selects between $\vect e_1$ and $\vect e_3$. Alignment is a second-order effect in the torque: it relies on the lag $I_0/c_0$ of the spin behind the torque. Its rate is $\sim g^2I_0\lambda^2/c_0^3$, while the precession frequency is $\sim g\lambda/c_0$. For the common case $\lambda_3>\lambda_2>\lambda_1>0$ (positive-definite $\delta\mathbf T_{\rm th}$) condition~(b) holds for $\vect e_3$ and fails for $\vect e_1$, and the three eigenmotions have the following stability character:
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Eigenmotion & Eigenvalue & Stability (for $\lambda_1,\lambda_2,\lambda_3>0$)\\
+\midrule
+$\vect e_1$ & $\lambda_1$ (smallest) & unstable (repeller)\\
+$\vect e_2$ & $\lambda_2$ (middle) & saddle (unstable)\\
+$\vect e_3$ & $\lambda_3$ (largest) & \textbf{stable attractor}\\
+\bottomrule
+\end{tabular}
+\end{center}
+For a positive-definite $\delta\mathbf T_{\rm th}$, all generic initial conditions converge to eigenmotion~3: the body aligns the axis with the largest eigenvalue of $\delta\mathbf T_{\rm th}$ with the temperature gradient. Along these trajectories $V(\vect u)=\vect u\T\delta\mathbf T_{\rm th}\vect u$, the projection of the thermophoretic torque onto the gradient direction, is found numerically to increase monotonically to its maximum $\lambda_3$. For other spectra the rule changes. For a negative-definite $\delta\mathbf T_{\rm th}$, criterion~(41b) selects $\vect e_1$, the eigenvalue of largest magnitude. For some mixed-sign spectra, e.g.\ $\{-1,\,0.5,\,2\}$, neither $\vect e_1$ nor $\vect e_3$ satisfies~(b), and no steady spin is stable.
+
+\paragraph{Physical interpretation.} The body rotates until the torque $\delta\mathbf T_{\rm th}\vect u$ is parallel to the driving field $\vect u$, leaving no torque component perpendicular to $\vect u$ to drive further reorientation. Near such an orientation the residual transverse torque makes $\vect u$ precess about $\vect e_k$; because the spin lags the torque by the time $I_0/c_0$, the precession either spirals in or spirals out, according to criterion~(41b).
+
+\subsection{Translational dynamics and general steady motion}
+Once the angular velocity $\vect\omega^b$ is determined from the rotational steady state (Section~2.2), the translational equation~(13) in the body frame at steady state ($\dot{\vect v}=0$) becomes, using $\nabla\ln T=-G\hat Z$ and $\vect u=R\T\hat Z$:
+\begin{equation}
+  \mathbf f_{\rm drag}\vect v^b=G\,\mathbf f_{\rm th}\vect u-Mg\,\vect u.
+\end{equation}
+For a precessing body $\dot{\vect v}$ is really the centripetal acceleration $\vect\Omega\times\vect v$. Neglecting it requires $M\Omega/\xi_0\ll1$, and the exact circular solution below is reduced by a factor $[1+(M\Omega_3/\xi_0)^2]^{-1/2}$.\chg{C12} Expanding with Eq.~(34), $\mathbf f_{\rm th}=\gamma_0\mathbf I_3+\varepsilon\,\delta\mathbf f_{\rm th}$ and $\mathbf f_{\rm drag}=\xi_0\mathbf I_3+\varepsilon\,\delta\mathbf f_{\rm drag}$:
+\begin{equation}
+  \xi_0\vect v^b=(\gamma_0G-Mg)\,\vect u+\varepsilon\left[G\,\delta\mathbf f_{\rm th}-\frac{\gamma_0G-Mg}{\xi_0}\,\delta\mathbf f_{\rm drag}\right]\vect u .
+\end{equation}
+
+\paragraph{Levitation condition to first order in $\varepsilon$.}\chg{C13} The lab-frame vertical velocity is obtained by projecting Eq.~(43) onto $\vect u=R\T\hat Z$ (using $v_Z=\hat Z\cdot R\vect v^b=\vect u\cdot\vect v^b$). Near levitation $\gamma_0G-Mg=O(\varepsilon)$, so the drag correction in~(43) is $O(\varepsilon^2)$ and drops out:
+\begin{equation}
+  v_Z=\frac{\gamma_0G-Mg}{\xi_0}+\varepsilon G\,(\delta\mathbf A)_{33}+O(\varepsilon^2),
+\end{equation}
+where we define the anisotropic thermophoretic mobility tensor
+\begin{equation}
+  \delta\mathbf A\equiv\frac{1}{\xi_0}\,\delta\mathbf f_{\rm th},\qquad A_0\equiv\frac{\gamma_0}{\xi_0},
+\end{equation}
+and $(\delta\mathbf A)_{33}=\vect e_3\cdot\delta\mathbf A\,\vect e_3$ is its component along the precession axis. The anisotropy of the drag tensor does not enter at this order. The \emph{full} levitation condition $\langle v_Z\rangle=0$ applied to Eq.~(44) gives a single equation for the required temperature-gradient magnitude:
+\begin{equation}
+  G=\frac{Mg}{\gamma_0+\varepsilon\xi_0(\delta\mathbf A)_{33}}=\frac{Mg}{\gamma_0}\Big[1-\varepsilon\,\frac{(\delta\mathbf A)_{33}}{A_0}+O(\varepsilon^2)\Big]=\frac{Mg}{\gamma_0+\varepsilon\,(\delta\mathbf f_{\rm th})_{33}}+O(\varepsilon^2).
+\end{equation}
+The zeroth-order levitation gradient is $G_0=Mg/\gamma_0$, and the $O(\varepsilon)$ correction shifts $G$ by an amount proportional to $(\delta\mathbf A)_{33}$: the asymmetry of the body modifies the gradient needed to keep the particle suspended. There is no separate constraint on $(\delta\mathbf A)_{33}$; it is a property of the particle shape that the experimenter accommodates by tuning $G$.
+
+\paragraph{First-order body-frame velocity.} With the levitation gradient~(46) substituted back into Eq.~(43), the body-frame velocity becomes, to $O(\varepsilon)$:
+\begin{equation}
+  \vect v^b=\varepsilon G_0\,\delta\mathbf A\,\vect u-\varepsilon G_0\,(\delta\mathbf A)_{33}\,\vect u+O(\varepsilon^2)=\varepsilon G_0\,\Pi_u\,\delta\mathbf A\,\vect u+O(\varepsilon^2),\qquad \Pi_u\equiv\mathbf I_3-\vect u\vect u\T .
+\end{equation}
+The two terms together ensure $\vect u\cdot\vect v^b=0$ to $O(\varepsilon)$: the body-frame velocity has \emph{no projection along} $\vect u$, so there is no residual vertical drift. The lab-frame velocity is $\vect v=R\vect v^b$ and lies entirely in the plane perpendicular to $\hat Z$.
+
+\paragraph{General steady solutions.} We now enumerate the possible steady motions depending on the orientation state.
+
+\emph{Case 1: Symmetric body ($\delta\mathbf T_{\rm th}=0$).} Then $\vect\omega^b=0$, $R$ is constant, and Eq.~(47) gives a constant body-frame velocity. The lab-frame velocity $\vect v=\varepsilon G_0\,R\,\Pi_u\,\delta\mathbf A\,R\T\hat Z$ is also constant. This is straight-line drift in a fixed direction. At levitation, the drift is purely horizontal.
+
+\emph{Case 2: Asymmetric body, transient phase.} Before the orientation has converged to a fixed point, $R(t)$ evolves on the precession and alignment timescales of Section~2.2. The CoM trajectory is non-periodic and traces a curved path depending on the initial orientation.
+
+\emph{Case 3: Asymmetric body, steady precession (attractor).} At the fixed point $\vect u=\vect e_3$ the lab-frame angular velocity is $\vect\Omega_3=(G\varepsilon\lambda_3/c_0)\hat Z$ (Eq.~(40)), parallel to $\hat Z$. The body therefore precesses about $\hat Z$: $R(t)=R_Z(\Omega_3t)R_0$ with $R_0\vect e_3=\hat Z$. With the levitation gradient~(46) imposed, $\vect v^b$ has no projection along $\vect e_3$, so the lab-frame velocity is entirely horizontal:
+\begin{equation}
+  \vect v(t)=\varepsilon G_0\,R_Z(\Omega_3t)\,\Pi_\perp R_0\,\delta\mathbf A\,\vect e_3,\qquad \Pi_\perp=\mathbf I_3-\hat Z\hat Z\T,
+\end{equation}
+with $v_Z=0$ by construction and $\vect v_\perp(t)$ having constant magnitude. Since $\vect v_\perp$ lies in the horizontal plane and $\vect\Omega_3\parallel\hat Z$, we have $\vect v_\perp\perp\vect\Omega_3$. The two conditions for circular motion are therefore:
+\begin{enumerate}
+  \item $\vect\Omega_3\parallel\hat Z$ --- from the fixed-point geometry $R\vect e_3=\hat Z$.
+  \item $\vect v_\perp\perp\vect\Omega_3$ --- automatically, since $\vect v_\perp$ lies in the horizontal plane.
+\end{enumerate}
+This is circular orbit motion.
+
+\paragraph{Circular orbit radius.} For the levitated case (gradient $G$ given by Eq.~(46)), both the orbital speed $|\vect v_\perp|=\varepsilon G_0|\Pi_\perp R_0\,\delta\mathbf A\,\vect e_3|$ and the spin rate $|\Omega_3|=G_0\varepsilon|\lambda_3|/c_0$ are linear in $\varepsilon G_0$, so their ratio is $O(1)$:
+\begin{equation}
+  \Omega_3=\frac{G_0\varepsilon\lambda_3}{c_0},\qquad
+  R_{\rm orbit}=\frac{|\vect v_\perp|}{|\Omega_3|}=\frac{c_0\,|\Pi_\perp R_0\,\delta\mathbf A\,\vect e_3|}{|\lambda_3|}=\frac{c_0\,|\Pi_{e_3}\,\delta\mathbf f_{\rm th}\,\vect e_3|}{\xi_0\,|\lambda_3|}.
+\end{equation}
+Direct integration of Eqs.~(23)--(26) confirms~(49) to $O(\varepsilon)$. Key features:
+\begin{enumerate}
+  \item $R_{\rm orbit}$ is $O(1)$: it is independent of both $\varepsilon$ and $G_0$, since the $\varepsilon G_0$ factors cancel in the ratio $|\vect v_\perp|/|\Omega_3|$. $R_{\rm orbit}$ depends only on the particle shape through $\delta\mathbf f_{\rm th}$, $\lambda_3$ and the drag coefficients $c_0,\xi_0$.
+  \item $\Omega_3\propto\varepsilon G_0$: a more asymmetric body or a stronger gradient spins faster, and the orbital speed $|\vect v_\perp|\propto\varepsilon G_0$ grows at the same rate, keeping the radius fixed.
+  \item If $\Pi_\perp R_0\,\delta\mathbf A\,\vect e_3=0$, i.e.\ $\vect e_3$ is also an eigenvector of $\delta\mathbf f_{\rm th}$ (the anisotropic drift of eigenmotion~3 is purely along $\hat Z$), then $R_{\rm orbit}=0$: the particle hovers at a fixed point with no horizontal motion. The drag anisotropy $\delta\mathbf f_{\rm drag}$ plays no role at this order.\chg{C13}
+  \item No orbit for a symmetric body: $\delta\mathbf T_{\rm th}=0$ gives $\lambda_3=0$, $\Omega_3=0$, and the particle drifts in a fixed direction (or hovers if the drift is vertical).
+\end{enumerate}
+
+\paragraph{Summary of steady motions.}
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Condition & $\vect\Omega$ & Trajectory\\
+\midrule
+$\delta\mathbf T_{\rm th}=0$ (symmetric) & 0 & straight-line drift (or hover)\\
+$\delta\mathbf T_{\rm th}\neq0$, transient & time-varying & curved, non-periodic\\
+$\delta\mathbf T_{\rm th}\neq0$, stable eigenmotion (e.g.\ 3) & $\Omega_3\hat Z$ & horizontal circle (or hover)\\
+Unstable eigenmotions & $\Omega_{1,2}\hat Z$ & circle (unstable)\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%======================================================================
+\section{Thermophoretic force on a surface element}
+%======================================================================
+We consider a surface element with area $A$ placed in a thermal field with temperature gradient $T'>0$ in the \emph{negative} $z$-direction: $\nabla T=-T'(0,0,1)=T'(0,0,-1)$. The gas is therefore colder at large $z$ (hot below, cold above),\chg{C4} and the thermophoretic force on a sphere is in the $+z$ direction (toward cold), opposing gravity. The heat flux is $\vect q=-\kappa\nabla T=\kappa T'\hat z$. The surface normal in spherical coordinates is $\hat n=(\sin\theta\cos\phi,\sin\theta\sin\phi,\cos\theta)$ with tangents $\hat t_1=(\cos\theta\cos\phi,\cos\theta\sin\phi,-\sin\theta)$ and $\hat t_2=(-\sin\phi,\cos\phi,0)$.
+
+Following Eqs.~(20--21) of Garcia-Ybarra \& Rosner (1989), the force on an element moving with velocity $\vect v$ relative to the gas is:\chg{C14}
+\begin{equation}
+  \frac1A\begin{pmatrix}F_{t_1}\\ F_{t_2}\\ F_n\end{pmatrix}
+  = \alpha\begin{pmatrix}0\\0\\-\frac12\sqrt{\pi/h}\end{pmatrix}
+  - \alpha\begin{pmatrix}\frac a2\,\vect v\cdot\hat t_1\\ \frac a2\,\vect v\cdot\hat t_2\\ \big[2-a(1-\pi/4)\big]\vect v\cdot\hat n\end{pmatrix}
+  + \alpha\frac{3\nu}{4}\frac{T'}{T}\begin{pmatrix}-\frac a2\sin\theta\\ 0\\ (2-a)\cos\theta\end{pmatrix},
+\end{equation}
+where $\alpha=mN/\sqrt{\pi h}$, $h=m/(2k_BT)$, and $a$ is the accommodation coefficient. The three terms are hydrostatic pressure ($-\frac12\alpha\sqrt{\pi/h}=-Nk_BT$), viscous drag, and thermophoretic stress, respectively. The coefficient $\nu=\frac{4}{15}\kappa/(Nk_B)$ equals the kinematic viscosity $\mu/(mN)$ for a monatomic gas. The tangential drag opposes the element's motion, and the tangential thermophoretic stress $-\frac a2\sin\theta\,\hat t_1$ points along the tangential projection of $\vect q$, toward the cold side.
+
+Equation~(50) follows from a Grad (13-moment) distribution for the gas, with a fraction $1-a$ of molecules re-emitted specularly and a fraction $a$ diffusely at the gas temperature. Integrated over a sphere of radius $R$ it gives Epstein's drag, $-\frac{4\pi}{3}R^2\rho\bar c\,(1+\pi a/8)\,\vect v$ (with $\bar c=\sqrt{8k_BT/\pi m}$ the mean speed), and Waldmann's thermophoretic force $\frac{16\sqrt\pi}{15}R^2\kappa T'/\bar v$, which is independent of $a$.
+
+%======================================================================
+\section{Thermophoretic force on a disk}
+%======================================================================
+A disk of area $A$ with normal tilted by $\theta$ from $\hat z$ in the $x$-$z$ plane has two surfaces with normals $\pm\hat n$. Summing both surfaces (pressure cancels, drag and thermophoresis double):\chg{C15}
+\begin{equation}
+  \begin{pmatrix}F_{t_1}\\ F_{t_2}\\ F_n\end{pmatrix}
+  = -\alpha\begin{pmatrix}a\,\vect v\cdot\hat t_1\\ a\,\vect v\cdot\hat t_2\\ 2\big[2-a(1-\pi/4)\big]\vect v\cdot\hat n\end{pmatrix}
+  + \alpha\frac{3\nu}{4}\frac{T'}{T}\begin{pmatrix}-a\sin\theta\\ 0\\ 2(2-a)\cos\theta\end{pmatrix}
+\end{equation}
+(per unit area $A$).
+
+%======================================================================
+\section{Thermophoretic force on a cylinder}
+%======================================================================
+For a cylinder of radius $r$ and length $L\gg r$ (end caps neglected), with its axis $\hat a=(\cos\theta,0,-\sin\theta)$ tilted by the angle $\theta$ below the $X$-axis in the $X$-$Z$ plane, and moving with $\vect v=(-v,0,0)$, the lab-frame force components are (Garcia-Ybarra \& Rosner 1989, Eq.~24):\chg{C16}
+\begin{align}
+  F_X &= f\left[(A\sin^2\theta+C\cos^2\theta)\,v+(B-D)\sin\theta\cos\theta\,\frac{T'}{T}\right],\\
+  F_Z &= f\left[(A-C)\sin\theta\cos\theta\,v+\big(B\cos^2\theta+D\sin^2\theta\big)\frac{T'}{T}\right],
+\end{align}
+where $f=mN\sqrt\pi\,rL/\sqrt h=\alpha\pi rL$, $A=2(1+a(\pi-2)/8)$, $B=\frac{3\nu}{2}(1-a/4)$, $C=a$, $D=3\nu a/4$. (For the opposite tilt sense, $\hat a=(\cos\theta,0,+\sin\theta)$, the two cross terms change sign.) For $v=0$ and $\theta=0$ (cylinder axis along $X$, perpendicular to the gradient), the levitation force is
+\begin{equation}
+  \vec F=\frac{mN\sqrt\pi\,rL}{\sqrt h}\,\frac{3\nu(1-a/4)}{2}\,\frac{T'}{T}\,\hat Z,
+\end{equation}
+directed upward ($+\hat Z$) to oppose gravity. A vertical cylinder ($\theta=\pi/2$) instead feels $F_Z=f\,D\,T'/T$. The horizontal-cylinder force is proportional to the cylinder volume $V_c=\pi r^2L$ in the same way as the sphere result is proportional to $V_o=\frac43\pi r^3$:
+\begin{equation}
+  \frac{\vec F}{V_c}=\Big(1-\frac a4\Big)\frac{\vec F_o}{V_o}.
+\end{equation}
+The conversion between the Zheng (2002) and Garcia-Ybarra conventions is\chg{C17}
+\begin{equation}
+  \frac{2\sqrt\pi\,mN\nu}{\sqrt h}=\frac{\eta\kappa T}{\bar v},\qquad \bar v=\sqrt{2k_BT/m},\qquad \eta\ \xrightarrow{\ \text{free mol.}\ }\ \frac{16\sqrt\pi}{15}\approx1.89 .
+\end{equation}
+
+%======================================================================
+\section{Hierarchy of forces and torques for a levitating particle}
+%======================================================================
+We now estimate the magnitudes of all four responses --- thermophoretic force, thermophoretic torque, gyrophoretic force, and rotational drag torque --- for a particle levitated in our thermal cell. The system parameters are: particle radius $\ell=20\,\mu$m, particle density $\rho=1\,$g/cm$^3$, temperature gradient $|\nabla T|=200\,$K/cm, gas pressure $P=5\,$Torr, and temperature $T=300\,$K (rarefied air). The temperature gradient is directed downward ($\nabla T=-|\nabla T|\hat Z$), so the thermophoretic force on a sphere points upward ($+\hat Z$) and can balance gravity.
+
+\paragraph{Gas and particle properties.} The mean thermal speed of air molecules is $\bar v=\sqrt{2k_BT/m}\approx415\,$m/s. At $P=5\,$Torr the mean free path is $\lambda\approx10\,\mu$m, giving a Knudsen number
+\begin{equation}
+  Kn=\lambda/\ell\approx0.5,
+\end{equation}
+placing the particle firmly in the transition regime between continuum and free-molecule flow. The particle mass is $M=\frac43\pi\ell^3\rho\approx3.4\times10^{-11}\,$kg.
+
+\paragraph{Dominant response: thermophoretic force.} Using the Waldmann free-molecule result (which is a good approximation even at $Kn\approx0.5$), the thermophoretic force is
+\begin{equation}
+  F_T=\eta\frac{\kappa}{\bar v}\ell^2|\nabla T|\approx9.5\times10^{-10}\,\mathrm N,\qquad \eta=\frac{16\sqrt\pi}{15}\approx1.89,
+\end{equation}
+where $\kappa=0.026\,$W/(m\,K) is the thermal conductivity of air. Strictly, Waldmann's result involves the translational conductivity, $\kappa_{\rm tr}=\frac{15}{4}(k_B/m)\mu\approx0.020\,$W/(m\,K) for air, which would lower $F_T$ by about 25\%.\chg{C18} Gravity gives $Mg\approx3.3\times10^{-10}\,$N, so $F_T/Mg\approx2.9$: the thermophoretic force is sufficient to levitate the particle, consistent with the experimental conditions.
+
+\paragraph{Thermophoretic torque.} The thermophoretic torque arises because different surface elements of a non-spherical body experience different stresses. Its magnitude is set by $F_T$ acting over a moment arm of order $\ell$:
+\begin{equation}
+  \tau_T\sim\Lambda|\nabla\ln T|\sim\Gamma\ell|\nabla\ln T|=F_T\ell\approx1.9\times10^{-14}\,\mathrm{N\,m},
+\end{equation}
+where we used $\Lambda\sim\Gamma\ell$ and $|\nabla\ln T|=|\nabla T|/T\approx66.7\,$m$^{-1}$. The thermophoretic torque is therefore $\ell$ times smaller than the thermophoretic force in the sense that $\tau_T=F_T\cdot\ell$, which is the natural geometric relationship between force and torque at the scale of the particle.
+
+\paragraph{Steady-state angular velocity.}\chg{C19} A freely suspended non-spherical particle subject to $\tau_T$ will spin until the rotational drag torque $\tau_{\rm drag}=C_r\omega$ balances it. For diffuse re-emission each molecule hitting the surface leaves with the local wall velocity, which gives the free-molecule rotational drag coefficient of a sphere, $C_r=\frac{2\pi}{3}\rho\bar c\,\ell^4=\frac{8\sqrt\pi}{3}\frac{P}{\bar v}\ell^4\approx1.2\times10^{-18}\,$N\,m\,s. The steady-state angular velocity is then
+\begin{equation}
+  \omega_{\rm ss}=\frac{\tau_T}{C_r}\sim\frac{F_T\ell}{C_r}\approx1.6\times10^4\,\mathrm{rad/s}\approx7.5\times10^{-4}\,\frac{\bar v}{\ell}.
+\end{equation}
+The steady-state spin is much slower than the natural frequency $\bar v/\ell\approx2\times10^7\,$rad/s set by the thermal speed and particle size, confirming the slow-rotation assumption underlying the linear response theory.
+
+\paragraph{Gyrophoretic force at steady-state spin.} The gyrophoretic force (from angular velocity coupling) at steady-state spin $\omega_{\rm ss}$ can be estimated with the dimensional guess $\Lambda'\sim\Lambda/(\ell\bar v)$:
+\begin{equation}
+  F_\omega\sim\Lambda'\omega_{\rm ss}=\frac{\Lambda}{\ell\bar v}\cdot\frac{F_T\ell}{C_r}=\frac{F_T\ell}{\bar vC_r}\cdot\frac{F_T}{|\nabla\ln T|}\approx5.3\times10^{-10}\,\mathrm N .
+\end{equation}
+This can be expressed analytically as\chg{C19}
+\begin{equation}
+  \frac{F_\omega}{F_T}=\frac{F_T\ell}{|\nabla\ln T|\,\bar vC_r}=\frac{\eta\kappa T}{\bar v}\,\frac{3}{8\sqrt\pi\,P\ell}\approx0.56 .
+\end{equation}
+With $\kappa=\frac{15}{4}(k_B/m)\mu$ and $\lambda=(\mu/P)\sqrt{\pi k_BT/2m}$ this becomes $F_\omega/F_T=\frac{45\,\eta}{32\pi}Kn\approx0.85\,Kn$, or $\approx1.1\,Kn$ with the total conductivity of air.
+
+The gyrophoretic force is therefore comparable to the thermophoretic force for a strongly non-spherical particle spinning at its steady-state rate. This is perhaps surprising: although $\delta=\omega_{\rm ss}\ell/\bar v\approx8\times10^{-4}$, the smallness of $\delta$ is compensated by the large ratio $|\mathbf T_{\rm th}|/|\mathbf T_{\rm drag}|\sim\bar v/\ell^2$, so that $F_\omega\sim\delta\cdot(\bar v/\ell)\cdot F_T/|\nabla\ln T|\cdot|\nabla\ln T|\sim F_T$. The ratio scales as $Kn$ --- it is a rarefaction effect, vanishing in the continuum limit where $\ell\gg\lambda$. For a near-sphere the estimate carries an additional factor $\varepsilon^2$ (Section~2.1).\chg{C10}
+
+\paragraph{Summary of the hierarchy.} Table~2 summarises all four responses for the present system.
+
+\begin{table}[h]
+\centering
+\caption{Estimated magnitudes of the four thermophoretic and drag responses for a levitating particle of generic shape. Parameters: $\ell=20\,\mu$m, $\rho=1\,$g/cm$^3$, $|\nabla T|=200\,$K/cm, $P=5\,$Torr, $T=300\,$K, $Kn\approx0.5$. The torque column is normalised by $\ell$ for direct comparison with forces.}
+\begin{tabular}{llll}
+\toprule
+Response & Expression & Magnitude & Ratio to $F_T$\\
+\midrule
+Thermophoretic force $F_T$ & $\Gamma|\nabla\ln T|$ & $9.5\times10^{-10}\,$N & 1\\
+Gravity $Mg$ & $\rho\frac43\pi\ell^3g$ & $3.3\times10^{-10}\,$N & 0.35\\
+Thermophoretic torque $\tau_T$ & $\Lambda|\nabla\ln T|\sim F_T\ell$ & $1.9\times10^{-14}\,$N\,m$^\dagger$ & 1\\
+Gyrophoretic force $F_\omega$ (at $\omega_{\rm ss}$) & $\Lambda'\omega_{\rm ss}\sim Kn\cdot F_T$ & $5.3\times10^{-10}\,$N & $\approx0.56$\\
+Rotational drag torque $\tau_{\rm drag}$ (at $\omega_{\rm ss}$) & $C_r\omega_{\rm ss}=\tau_T$ & $1.9\times10^{-14}\,$N\,m$^\dagger$ & 1\\
+\bottomrule
+\multicolumn{4}{l}{\footnotesize $^\dagger$Divided by $\ell=20\,\mu$m for comparison with forces.}
+\end{tabular}
+\end{table}
+
+Several conclusions follow from this analysis.
+\begin{enumerate}
+  \item \textbf{Thermophoretic force and torque are the primary drivers.} $F_T$ levitates the particle against gravity ($F_T/Mg\approx2.9$), while $\tau_T\sim F_T\cdot\ell$ rotates any non-spherical particle toward a preferred orientation. Both are first-order effects.
+  \item \textbf{The gyrophoretic force is not negligible.} For a strongly non-spherical particle spinning at steady state, the gyrophoretic force $F_\omega\sim Kn\cdot F_T$ is of the same order as $F_T$ in the transition regime ($Kn\sim0.5$). This coupling between rotation and translation is a rarefaction effect: it vanishes in the continuum limit $Kn\to0$. For a spherical particle the gyrophoretic coupling vanishes and this term is absent; for a near-sphere it is $O(\varepsilon^2)$.
+  \item \textbf{Three small dimensionless parameters govern the dynamics.} The translational drift velocity $v\sim F_T/\Xi$ satisfies $v/\bar v\approx3\times10^{-4}$ (Epstein drag); the steady spin satisfies $\omega_{\rm ss}\ell/\bar v\approx8\times10^{-4}$; and the particle is small compared to the gradient scale, $\ell/L_T\approx1.3\times10^{-3}$. All three confirm the validity of the linear response approximation.
+  \item \textbf{The transition regime requires special treatment.} With $Kn\approx0.5$, neither the continuum ($Kn\to0$) nor the free-molecule ($Kn\to\infty$) limit applies exactly. The full numerical solutions of the Boltzmann equation reviewed in Zheng (2002) are needed for quantitative predictions, particularly for the diagonal tensors $\mathbf f_{\rm th}$ and $\mathbf T_{\rm drag}$. The off-diagonal tensor $\mathbf T_{\rm th}$ has not been computed for the transition regime.
+\end{enumerate}
+
+\end{document}
