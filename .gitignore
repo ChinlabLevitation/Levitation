@@ -3,7 +3,6 @@
 *.png
 *.jpg
 *.jpeg
-*.pdf
 *.eps
 *.docx
 .DS_Store
