@@ -1,0 +1,226 @@
+::Title::
+Graded sphere: tensors and orbits of a sphere with density ρ(1 + εz)
+::Subtitle::
+Free-molecule response tensors, steady states, righting dynamics, and interactive simulations
+::Text::
+A sphere of radius $\ell$ whose density varies linearly along one body axis, $\rho(\boldsymbol{r}) = \rho_p(1 + \varepsilon z)$, is geometrically still a perfect sphere. Every gas–surface stress therefore acts about its geometric centre H. The density gradient only moves the centre of mass (CoM) off H and changes the inertia tensor. This notebook derives what that implies, using the corrected surface-element stress of the notes (v22, Eq. 50) as the only physical input.
+::Note::
+**Results in brief.** (1) About the CoM the particle has isotropic thermophoretic and drag tensors, plus three new blocks: an antisymmetric thermophoretic torque $\mathbf{T}_{\rm th} = \gamma_0[\boldsymbol{r}_H]_\times$, an antisymmetric translation–rotation drag coupling, and a parallel-axis correction to the rotational drag. Here $\boldsymbol{r}_H = -z_c\hat{e}_3$ and $z_c = \varepsilon\ell^2/5$. This is exactly the polar class $C_{\infty v}$ of the notes' Eq. (29a), with $\lambda_a = -\gamma_0z_c$. (2) The torque rights the particle heavy side down, with stiffness $Mgz_c$, like a damped pendulum. (3) $\mathbf{T}_{\rm th}$ has no real eigenvector with non-zero eigenvalue, so there is **no steady spin and no circular orbit**: the particle levitates and hovers. (4) The righting happens about the force centre: H moves during the swing but ends exactly where it started, while the CoM swings underneath it and ends lower by $z_c(1 - \cos\theta_0)$.
+::Section::
+1. Setup
+::Code::
+ClearAll["Global`*"];
+$verifications = {};
+record[ref_, claim_, status_, detail_] := (AppendTo[$verifications, {ref, claim, status, detail}]; VR[ref, claim, status, detail]);
+VR /: MakeBoxes[VR[ref_, claim_, status_, detail_], fmt_] := ToBoxes[Panel[Column[{Row[{Style[status, Bold, If[status == "VERIFIED", Darker[Green], Red]], "   ", Style[ref, Bold], ":  ", claim}], If[detail === "", Nothing, detail]}]], fmt];
+check[ref_String, claim_String, test_, detail_ : ""] := record[ref, claim, If[TrueQ[test], "VERIFIED", "DISCREPANCY"], detail];
+zeroQ[expr_] := AllTrue[Flatten[{Simplify[expr]}], PossibleZeroQ];
+sci[x_] := If[x == 0, "0", Module[{e = Floor[Log10[Abs[N[x]]]]}, ToString[NumberForm[N[x]/10^e, {3, 2}]] <> "e" <> ToString[e]]];
+num[x_] := ToString[NumberForm[N[x], {5, 3}]];
+hat[{a1_, a2_, a3_}] := {{0, -a3, a2}, {a3, 0, -a1}, {-a2, a1, 0}};
+quatR[{q0_, q1_, q2_, q3_}] := (q0^2 - {q1, q2, q3}.{q1, q2, q3}) IdentityMatrix[3] + 2 Outer[Times, {q1, q2, q3}, {q1, q2, q3}] + 2 q0 hat[{q1, q2, q3}];
+Qmat[{q0_, q1_, q2_, q3_}] := {{-q1, -q2, -q3}, {q0, -q3, q2}, {q3, q0, -q1}, {-q2, q1, q0}};
+Zhat = {0, 0, 1}; e3 = {0, 0, 1};
+$Assumptions = {l > 0, rho0 > 0, al > 0, hh > 0, kap > 0, Tk > 0, 0 < aa <= 1, -1 < eps l < 1, Element[zc, Reals]};
+::Section::
+2. Mass properties
+::Text::
+Measure body coordinates from the geometric centre H. The density $\rho_p(1 + \varepsilon z)$ stays positive as long as $|\varepsilon|\ell < 1$. Odd moments of the sphere vanish, so the mass is unchanged and the CoM moves along $\hat{e}_3$ by $z_c = \varepsilon\langle z^2\rangle = \varepsilon\ell^2/5$. The inertia about H is also unchanged, $\frac{2}{5}M\ell^2\mathbf{I}_3$. About the CoM, the parallel-axis theorem lowers the two transverse moments.
+::Code::
+rho[r_, th_] := rho0 (1 + eps r Cos[th]);
+sphInt[f_] := Integrate[f r^2 Sin[th], {r, 0, l}, {th, 0, Pi}, {ph, 0, 2 Pi}];
+Mass = sphInt[rho[r, th]];
+com = sphInt[rho[r, th] r {Sin[th] Cos[ph], Sin[th] Sin[ph], Cos[th]}]/Mass;
+inertiaH = sphInt[rho[r, th] (r^2 IdentityMatrix[3] - Outer[Times, #, #] &[r {Sin[th] Cos[ph], Sin[th] Sin[ph], Cos[th]}])];
+inertiaCoM = Simplify[inertiaH - Mass (com.com IdentityMatrix[3] - Outer[Times, com, com])];
+Column[{Row[{"M = ", TraditionalForm[Simplify[Mass]], ",   CoM = ", TraditionalForm[Simplify[com]]}],
+  Row[{"I(H) = ", TraditionalForm[MatrixForm[Simplify[inertiaH]]], "     I(CoM) = ", TraditionalForm[MatrixForm[Simplify[inertiaCoM]]]}],
+  check["mass", "M = (4/3) pi l^3 rho0, independent of eps", zeroQ[Mass - 4/3 Pi l^3 rho0]],
+  check["CoM", "CoM displaced by z_c = eps l^2/5 along e3", zeroQ[com - {0, 0, eps l^2/5}]],
+  check["inertia", "inertia about H unchanged; about CoM the transverse moments drop by M z_c^2", zeroQ[inertiaH - 2/5 Mass l^2 IdentityMatrix[3]] &&
+    zeroQ[inertiaCoM - (2/5 Mass l^2 IdentityMatrix[3] - Mass (eps l^2/5)^2 DiagonalMatrix[{1, 1, 0}])]]}]
+::Section::
+3. Response tensors from the surface stresses
+::Text::
+The only physical input is the free-molecule stress on a surface element (notes v22, Eq. 50). It applies to a convex body, where every element sees the undisturbed gas. Here $\boldsymbol{V}$ is the wall velocity relative to the gas, $\boldsymbol{q} = -\kappa T\nabla\ln T$ is the heat flux, $a$ is the accommodation coefficient, $\alpha = mN/\sqrt{\pi h}$ and $h = m/2k_BT$:
+::Math::
+\boldsymbol{\sigma} = -\alpha\left[\frac{a}{2}\boldsymbol{V}_t + \left(2 - a + \frac{\pi a}{4}\right)(\boldsymbol{V}\cdot\hat{n})\hat{n}\right] + \frac{a\sqrt{h}}{5\sqrt{\pi}}\boldsymbol{q}_t + \frac{2(2 - a)\sqrt{h}}{5\sqrt{\pi}}(\boldsymbol{q}\cdot\hat{n})\hat{n} \qquad (\text{pressure omitted: it cancels on a closed surface})
+::Text::
+Put the CoM at the origin. The sphere's surface is then $\boldsymbol{r} = \boldsymbol{r}_H + \ell\hat{n}$ with $\boldsymbol{r}_H = -z_c\hat{e}_3$. For a body moving with velocity $\boldsymbol{v}$ and angular velocity $\boldsymbol{\omega}$ (body frame), the wall velocity is $\boldsymbol{v} + \boldsymbol{\omega}\times\boldsymbol{r}$. Integrating $\boldsymbol{\sigma}$ and $\boldsymbol{r}\times\boldsymbol{\sigma}$ over the sphere gives the complete linear response about the CoM, $(\boldsymbol{F}, \boldsymbol{\tau}) = -\mathcal{R}\cdot(\nabla\ln T, \boldsymbol{v}, \boldsymbol{\omega})$, a $6\times9$ matrix.
+::Code::
+nH[th_, ph_] := {Sin[th] Cos[ph], Sin[th] Sin[ph], Cos[th]};
+stress[n_, V_, q_] := -al ((aa/2) (V - (V.n) n) + (2 - aa (1 - Pi/4)) (V.n) n) + aa Sqrt[hh]/(5 Sqrt[Pi]) (q - (q.n) n) + 2 (2 - aa) Sqrt[hh]/(5 Sqrt[Pi]) (q.n) n;
+rH = {0, 0, -zc}; vv = {v1, v2, v3}; ww = {w1, w2, w3}; gg = {g1, g2, g3};
+wrench = Simplify[Integrate[Module[{n = nH[th, ph], r, s}, r = rH + l n; s = stress[n, vv + Cross[ww, r], -kap Tk gg]; Join[s, Cross[r, s]] l^2 Sin[th]],
+    {th, 0, Pi}, {ph, 0, 2 Pi}]];
+Rsp = -D[wrench, {Join[gg, vv, ww]}];
+gamma0 = Rsp[[1, 1]]; xi0 = Rsp[[1, 4]]; c0 = Rsp[[6, 9]];
+Column[{Row[{"\[Gamma]0 = ", TraditionalForm[gamma0], ",   \[Xi]0 = ", TraditionalForm[Factor[xi0]], ",   c0 = ", TraditionalForm[c0]}],
+  Row[{"\[ScriptCapitalR] = ", TraditionalForm[MatrixForm[Rsp /. {gamma0 -> "\[Gamma]0"}]]}]}]
+::Text::
+Read the blocks off, in the notation of the notes plus the coupling block $\mathbf{B}$ that the notes omit:
+::Math::
+\mathbf{f}_{\rm th} = \gamma_0\mathbf{I}_3 , \quad \mathbf{f}_{\rm drag} = \xi_0\mathbf{I}_3 , \quad \mathbf{T}_{\rm th} = \gamma_0[\boldsymbol{r}_H]_\times = -\gamma_0z_c[\hat{e}_3]_\times , \quad \mathbf{T}_{\rm drag} = c_0\mathbf{I}_3 + \xi_0z_c^2\,{\rm diag}(1, 1, 0) , \quad \mathbf{B} = -\xi_0[\boldsymbol{r}_H]_\times
+::Math::
+\gamma_0 = \frac{16\sqrt{\pi}}{15}\frac{\kappa T\ell^2}{\bar{v}} , \qquad \xi_0 = \frac{4\pi}{3}\ell^2\rho_g\bar{c}\left(1 + \frac{\pi a}{8}\right) , \qquad c_0 = \frac{2\pi}{3}a\rho_g\bar{c}\,\ell^4 , \qquad \bar{v} = \sqrt{2k_BT/m} = 1/\sqrt{h} , \quad \rho_g\bar{c} = 2\alpha
+::Text::
+Everything about the CoM follows from forces applied at H. The thermophoretic and drag forces act at H, so they exert torques $\boldsymbol{r}_H\times\boldsymbol{F}$ about the CoM, and rotation about the CoM moves H, so it drags. The $6\times6$ resistance block $\pmatrix{\mathbf{f}_{\rm drag} & \mathbf{B} \\ \mathbf{B}^{\top} & \mathbf{T}_{\rm drag}}$ is symmetric (Onsager) and positive-definite.
+::Code::
+Tth = Rsp[[4 ;; 6, 1 ;; 3]]; Bblk = Rsp[[1 ;; 3, 7 ;; 9]]; Res6 = Rsp[[All, 4 ;; 9]];
+Column[{
+  check["Waldmann", "gamma0 = (16 Sqrt[pi]/15) kappa T l^2/vbar", zeroQ[gamma0 - 16 Sqrt[Pi]/15 kap Tk l^2 Sqrt[hh]]],
+  check["Epstein", "xi0 = (4 pi/3) l^2 (rho cbar)(1 + pi a/8) with rho cbar = 2 alpha", zeroQ[xi0 - 4 Pi/3 l^2 (2 al) (1 + Pi aa/8)]],
+  check["rotation", "c0 = (2 pi/3) a (rho cbar) l^4", zeroQ[c0 - 2 Pi/3 aa (2 al) l^4]],
+  check["T_th", "T_th = gamma0 [r_H]x (antisymmetric, lambda_a = -gamma0 z_c)", zeroQ[Tth - gamma0 hat[rH]]],
+  check["coupling", "B = -xi0 [r_H]x and T_drag = c0 + xi0 z_c^2 diag(1,1,0)", zeroQ[Bblk + xi0 hat[rH]] && zeroQ[Rsp[[4 ;; 6, 7 ;; 9]] - (c0 IdentityMatrix[3] + xi0 zc^2 DiagonalMatrix[{1, 1, 0}])]],
+  check["Onsager", "6x6 resistance matrix is symmetric", zeroQ[Res6 - Transpose[Res6]]],
+  check["shift rule", "all blocks follow from the sphere tensors at H by the rigid shift r_H",
+   Module[{P = ArrayFlatten[{{IdentityMatrix[3], -hat[rH]}, {0, IdentityMatrix[3]}}], thH, resH},
+    thH = Join[gamma0 IdentityMatrix[3], ConstantArray[0, {3, 3}]]; resH = ArrayFlatten[{{xi0 IdentityMatrix[3], 0}, {0, c0 IdentityMatrix[3]}}];
+    zeroQ[Rsp - Join[Transpose[P].thH, Transpose[P].resH.P, 2]]]]}]
+::Section::
+4. Steady states: levitation, orientation, and the absence of orbits
+::Text::
+Take the uniform gradient of the notes, $\nabla\ln T = -G\hat{Z}$. Because $\mathbf{f}_{\rm th}$ is isotropic, the thermophoretic force is $\gamma_0G\hat{Z}$ in every orientation, so the levitation gradient is exactly $G_0 = Mg/\gamma_0$, independent of $\varepsilon$. The force acts at H while gravity acts at the CoM. The torque $\boldsymbol{r}_H\times\gamma_0G\hat{Z}$ vanishes only when $\boldsymbol{r}_H$ is vertical. The stable orientation has H above the CoM, i.e. the heavy side down, with restoring stiffness $\kappa_\theta = Mgz_c$ at $G = G_0$.
+
+In the notes' language (Section 2.2), $\delta\mathbf{T}_{\rm th}$ is antisymmetric. Its only real eigenvector is $\hat{e}_3$, with eigenvalue $\lambda = 0$, so the steady state has $\boldsymbol{\Omega} = 0$: **no spin, hence no precession and no circular orbit** (Eq. 49 gives nothing to divide by). The particle hovers. The notes' symmetric-eigenvector analysis does not apply to an antisymmetric $\delta\mathbf{T}_{\rm th}$: the torque here does not spin the body, it *aligns* it.
+::Code::
+Module[{gl = -G Zhat, torqueAtTilt, eig},
+ torqueAtTilt[th_] := Module[{R = RotationMatrix[th, {0, 1, 0}].RotationMatrix[Pi, {1, 0, 0}]},        (* heavy axis tilted by th from straight down *)
+   R.(-Tth.(Transpose[R].gl))];
+ eig = Eigensystem[Tth /. zc -> 1];
+ Column[{
+   Row[{"torque (lab) at heavy-axis tilt \[Theta]:  ", TraditionalForm[Simplify[torqueAtTilt[\[Theta]] /. G -> Mg/gamma0]]}],
+   check["levitation", "levitation gradient G0 = M g/gamma0 is independent of eps (f_th isotropic)", zeroQ[Rsp[[1 ;; 3, 1 ;; 3]] - gamma0 IdentityMatrix[3]]],
+   check["righting", "restoring torque -M g z_c sin(theta) about the horizontal axis at G = G0", zeroQ[(torqueAtTilt[\[Theta]] /. G -> Mg/gamma0) - {0, -Mg zc Sin[\[Theta]], 0}]],
+   check["no spin", "the only real eigenvector of T_th is e3, with eigenvalue 0: no steady spin, no orbit", Select[eig[[1]], Element[#, Reals] &] === {0}]}]]
+::Section::
+5. Linear dynamics: a damped pendulum that rights about H
+::Text::
+Tilt the heavy axis by a small angle $\theta$ about $\hat{Y}$ from straight down at $G = G_0$, and let the CoM move horizontally by $X$. The force centre is at $X_H = X + z_c\theta$ and its velocity drags. The horizontal force and the torque are
+::Math::
+M\ddot{X} = -\xi_0(\dot{X} + z_c\dot{\theta}) , \qquad I_{\perp}\ddot{\theta} = -z_c\xi_0(\dot{X} + z_c\dot{\theta}) - c_0\dot{\theta} - Mgz_c\,\theta ,
+::Text::
+with $I_{\perp} = \frac{2}{5}M\ell^2 - Mz_c^2$. The coupling is symmetric, as reciprocity requires. The characteristic polynomial, after removing the neutral translation mode $s = 0$, is a cubic in which the coupling cancels from the linear coefficient:
+::Math::
+MI_{\perp}s^3 + (Mc_0 + Mz_c^2\xi_0 + \xi_0I_{\perp})s^2 + (M^2gz_c + \xi_0c_0)s + \xi_0Mgz_c = 0 .
+::Text::
+Integrating the $X$ equation once gives $M\dot{X} + \xi_0(X + z_c\theta) = {\rm const}$. When the particle comes to rest, $X_H = X + z_c\theta$ has returned to its initial value: **H ends where it started; the CoM swings underneath it.** The result is exact, not just linear. Because $\mathbf{f}_{\rm th}$ and $\mathbf{f}_{\rm drag}$ are isotropic, the net force is $-\xi_0\dot{\boldsymbol{x}}_H$ plus the balanced weight and thermophoresis, so $M\dot{\boldsymbol{v}} = -\xi_0\dot{\boldsymbol{x}}_H$ integrates to $\boldsymbol{x}_H(\infty) = \boldsymbol{x}_H(0) + M\boldsymbol{v}(0)/\xi_0$. Section 6 checks this numerically.
+::Code::
+lin = Module[{Ip = 2/5 Mm l^2 - Mm zc^2, mat, poly},
+   mat = {{Mm s^2 + xi0 s, xi0 zc s}, {xi0 zc s, Ip s^2 + (c0 + xi0 zc^2) s + Mm gg0 zc}};
+   poly = Factor[Det[mat]];
+   {poly, Collect[Simplify[poly/s], s, Simplify]}];
+Column[{Row[{"det = ", TraditionalForm[lin[[1]]]}],
+  check["cubic", "linear coefficient is M^2 g z_c + xi0 c0 (the coupling cancels)",
+   zeroQ[Coefficient[Expand[lin[[2]]], s, 1] - (Mm^2 gg0 zc + xi0 c0)]]}]
+::Section::
+6. Realistic particles
+::Text::
+The defaults follow the notes' Section 6: $\ell = 20\,\mu$m, $\rho_p = 1$ g/cm³, air at $T = 300$ K and $P = 5$ Torr, full accommodation, and $\kappa = 0.026$ W/(m K), with $\varepsilon\ell = 0.5$. The temperature field is the notes' uniform gradient $\nabla\ln T = -G\hat{Z}$ with $G = f_GG_0$. An optional harmonic curvature (radial and vertical trap frequencies $f_r$, $f_z$) represents the confinement of the real cell. At $Kn \approx 0.5$ the free-molecule coefficients are only indicative.
+::Code::
+$kB = 1.380649*^-23; $mAir = 4.81*^-26; $g = 9.81;
+physics[pars_Association] := Module[{p = Join[<|"radius" -> 20*^-6, "rhoP" -> 1000., "epsL" -> 0.5, "T" -> 300., "PTorr" -> 5., "kappa" -> 0.026, "a" -> 1.,
+      "fG" -> 1., "fr" -> 0., "fz" -> 0.|>, pars], l0, N0, h0, al0, M0, zc0, subs, gam, xi, cr, Ip, I3, mu, lam, G0},
+   l0 = p["radius"]; N0 = p["PTorr"] 133.322/($kB p["T"]); h0 = $mAir/(2 $kB p["T"]); al0 = $mAir N0/Sqrt[Pi h0];
+   M0 = 4/3 Pi l0^3 p["rhoP"]; zc0 = p["epsL"] l0/5;
+   subs = {l -> l0, al -> al0, hh -> h0, kap -> p["kappa"], Tk -> p["T"], aa -> p["a"], zc -> zc0};
+   {gam, xi, cr} = {gamma0, xi0, c0} /. subs; G0 = M0 $g/gam;
+   Ip = 2/5 M0 l0^2 - M0 zc0^2; I3 = 2/5 M0 l0^2;
+   mu = 1.716*^-5 (p["T"]/273.15)^1.5 (273.15 + 110.4)/(p["T"] + 110.4); lam = mu/(p["PTorr"] 133.322) Sqrt[Pi $kB p["T"]/(2 $mAir)];
+   Join[p, <|"M" -> M0, "zc" -> zc0, "R" -> N[Rsp /. subs], "gamma0" -> gam, "xi0" -> xi, "c0" -> cr, "I" -> DiagonalMatrix[{Ip, Ip, I3}], "G0" -> G0,
+     "gradT0 (K/cm)" -> G0 p["T"]/100, "Kn" -> lam/l0, "tauV" -> M0/xi, "tauR" -> Ip/cr,
+     "A" -> DiagonalMatrix[{M0 (2 Pi p["fr"])^2/gam, M0 (2 Pi p["fr"])^2/gam, M0 (2 Pi p["fz"])^2/gam}]|>]];
+linearModes[ph_] := Module[{s, roots}, roots = s /. NSolve[ph["M"] ph["I"][[1, 1]] s^3 + (ph["M"] ph["c0"] + ph["M"] ph["zc"]^2 ph["xi0"] + ph["xi0"] ph["I"][[1, 1]]) s^2 +
+       (ph["M"]^2 $g Abs[ph["zc"]] + ph["xi0"] ph["c0"]) s + ph["xi0"] ph["M"] $g Abs[ph["zc"]] == 0, s];
+   <|"roots" -> roots, "pendulum f (Hz)" -> Max[Abs[Im[roots]]]/(2 Pi), "pendulum decay (1/s)" -> -Re[First[SortBy[roots, -Abs[Im[#]] &]]]|>];
+ph0 = physics[<||>];
+Grid[{{"M (kg)", ph0["M"]}, {"z_c (um)", 10^6 ph0["zc"]}, {"gamma0 (N m)", ph0["gamma0"]}, {"xi0 (N s/m)", ph0["xi0"]}, {"c0 (N m s)", ph0["c0"]},
+  {"levitation |grad T| (K/cm)", ph0["gradT0 (K/cm)"]}, {"Kn", ph0["Kn"]}, {"M/xi0 (ms)", 1000 ph0["tauV"]}, {"I_perp/c0 (ms)", 1000 ph0["tauR"]},
+  {"pendulum frequency (Hz)", linearModes[ph0]["pendulum f (Hz)"]}, {"pendulum decay rate (1/s)", linearModes[ph0]["pendulum decay (1/s)"]}}, Frame -> All, Alignment -> Left]
+::Text::
+**Simulator.** This integrates the full nonlinear rigid-body equations (notes, Eqs. 23–26), extended by the coupling blocks: body-frame wrench $-\mathcal{R}\cdot(R^{\top}\nabla\ln T(\boldsymbol{x}_H), R^{\top}\boldsymbol{v}, \boldsymbol{\omega})$, gravity at the CoM, and the field evaluated at the force centre $\boldsymbol{x}_H = \boldsymbol{x} + R\boldsymbol{r}_H$. Lengths are scaled by $\ell$ and times by 1 ms internally.
+::Code::
+simulate[ph_, tiltDeg_, spin_, tEndMs_, x0_ : {0, 0, 0}] := Module[{M0 = ph["M"], I0 = ph["I"], Iinv, Rm = ph["R"], rHv = {0, 0, -ph["zc"]}, A = ph["A"], G = ph["fG"] ph["G0"],
+    l0 = ph["radius"], t0 = 10^-3, rhs, f, y, t, sol, qDown, q0, sc},
+   Iinv = Inverse[I0];
+   qDown = If[ph["epsL"] >= 0, {0., 1., 0., 0.}, {1., 0., 0., 0.}];            (* heavy side straight down *)
+   q0 = Normalize[{Cos[tiltDeg Degree/2], 0, Sin[tiltDeg Degree/2], 0}];          (* tilt about lab Y *)
+   q0 = Module[{a = q0, b = qDown}, Prepend[a[[1]] b[[2 ;; 4]] + b[[1]] a[[2 ;; 4]] + Cross[a[[2 ;; 4]], b[[2 ;; 4]]], a[[1]] b[[1]] - a[[2 ;; 4]].b[[2 ;; 4]]]];
+   rhs[s_] := Module[{x = s[[1 ;; 3]], v = s[[4 ;; 6]], q = s[[7 ;; 10]], w = s[[11 ;; 13]], R, wr},
+     R = quatR[q/Sqrt[q.q]];
+     wr = -Rm.Join[Transpose[R].(A.(x + R.rHv) - G Zhat), Transpose[R].v, w];
+     Join[v, R.wr[[1 ;; 3]]/M0 - $g Zhat, 1/2 Qmat[q].w, Iinv.(wr[[4 ;; 6]] - Cross[w, I0.w])]];
+   sc = Join[ConstantArray[l0, 3], ConstantArray[l0/t0, 3], {1, 1, 1, 1}, ConstantArray[1/t0, 3]];
+   f[yy_?(VectorQ[#, NumericQ] &)] := t0 rhs[sc yy]/sc;
+   sol = NDSolveValue[{y'[t] == f[y[t]], y[0] == Join[x0/l0, {0, 0, 0}, q0, spin t0]}, y, {t, 0, tEndMs}, MaxSteps -> 10^6, PrecisionGoal -> 9, AccuracyGoal -> 10];
+   <|"ph" -> ph, "tEnd" -> tEndMs, "state" -> Function[{tm}, Module[{yy = sol[tm]}, Join[l0 yy[[1 ;; 6]] {1, 1, 1, 1/t0, 1/t0, 1/t0}, Normalize[yy[[7 ;; 10]]], yy[[11 ;; 13]]/t0]]]|>];
+heavyTilt[q_, ph_] := ArcCos[Clip[-(quatR[q].(Sign[ph["epsL"]] e3)).Zhat, {-1, 1}]]/Degree;
+forceCentre[st_, ph_] := st[[1 ;; 3]] + quatR[st[[7 ;; 10]]].{0, 0, -ph["zc"]};
+::Code::
+run0 = simulate[ph0, 30, {0, 0, 0}, 150];
+Module[{ts = Range[0, 60, 0.1], st, tilt, X, XH, lm = linearModes[ph0], fit},
+ st = run0["state"] /@ ts; tilt = heavyTilt[#[[7 ;; 10]], ph0] & /@ st; X = 10^6 st[[All, 1]]; XH = 10^6 (forceCentre[#, ph0][[1]] & /@ st);
+ Column[{
+   Row[{ListLinePlot[Transpose[{ts, tilt}], Frame -> True, FrameLabel -> {"t (ms)", "heavy-axis tilt (deg)"}, PlotLabel -> "righting from 30\[Degree]", ImageSize -> 330, PlotRange -> All],
+     ListLinePlot[{Transpose[{ts, X}], Transpose[{ts, XH}]}, Frame -> True, FrameLabel -> {"t (ms)", "X (\[Mu]m)"}, PlotLegends -> {"CoM", "force centre H"},
+      PlotLabel -> "horizontal position", ImageSize -> 380, PlotRange -> All]}],
+   check["nonlinear", "H returns to its start: X_H(end) = X_H(0) = z_c sin(theta0)", Abs[XH[[-1]] - 10^6 ph0["zc"] Sin[30 Degree]] < 10^-3 Abs[XH[[1]]],
+    "X_H(0) = " <> num[XH[[1]]] <> " um, X_H(end) = " <> num[XH[[-1]]] <> " um; the CoM moved from 0 to " <> num[X[[-1]]] <> " um."],
+   check["frequency", "small-tilt oscillation frequency matches the linear cubic",
+    Module[{run = simulate[ph0, 2, {0, 0, 0}, 40], tt = Range[0, 40, 0.01], th, zeros},
+      th = (quatR[run["state"][#][[7 ;; 10]]].(Sign[ph0["epsL"]] e3))[[1]] & /@ tt;
+      zeros = Select[Partition[Transpose[{tt, th}], 2, 1], #[[1, 2]] #[[2, 2]] < 0 &][[All, 1, 1]];
+      Abs[1000/(2 Mean[Differences[zeros]]) / lm["pendulum f (Hz)"] - 1] < 0.02],
+    "linear prediction " <> ToString[NumberForm[lm["pendulum f (Hz)"], 4]] <> " Hz"],
+   check["steady state", "after 150 ms the particle is at rest: no spin and no orbit", Norm[run0["state"][150][[11 ;; 13]]] < 10^-3 && Norm[run0["state"][150][[4 ;; 6]]] < 10^-9,
+    "|omega| = " <> sci[Norm[run0["state"][150][[11 ;; 13]]]] <> " rad/s, |v| = " <> sci[Norm[run0["state"][150][[4 ;; 6]]]] <> " m/s"]}]]
+::Section::
+7. Interactive simulations
+::Text::
+**Explorer.** Change the particle and cell parameters and the initial condition, and the notebook integrates the full equations again. Useful things to try: an initial spin about a horizontal axis, which precesses and damps; a spin about $\hat{e}_3$, which is neutral apart from drag; a gradient off levitation ($f_G \ne 1$), which gives drift at terminal velocity; a radial trap; and the inverted start (tilt near 180°), which is unstable. Each change re-runs the integration, which takes a second or two.
+::Code::
+Manipulate[
+ Module[{ph = physics[<|"radius" -> rad 10^-6, "rhoP" -> rhoc 1000, "epsL" -> epsL, "PTorr" -> pT, "T" -> temp, "a" -> acc, "fG" -> fG, "fr" -> fr, "fz" -> fz|>],
+   run, ts, st, lm},
+  run = simulate[ph, tilt0, {spinX, 0, spinZ}, tEnd];
+  ts = Subdivide[0, tEnd, 600]; st = run["state"] /@ ts; lm = linearModes[ph];
+  Column[{
+    Grid[{{
+      ListLinePlot[Transpose[{ts, heavyTilt[#[[7 ;; 10]], ph] & /@ st}], Frame -> True, FrameLabel -> {"t (ms)", "heavy-axis tilt (deg)"}, ImageSize -> 270, PlotRange -> All],
+      ListLinePlot[{Transpose[{ts, 10^6 st[[All, 3]]}]}, Frame -> True, FrameLabel -> {"t (ms)", "CoM height (\[Mu]m)"}, ImageSize -> 270, PlotRange -> All]}, {
+      Graphics3D[{{RGBColor[0.3, 0.6, 0.9], Line[10^6 st[[All, 1 ;; 3]]]}, {Red, Line[10^6 (forceCentre[#, ph] & /@ st)]},
+        {Black, PointSize[Medium], Point[10^6 st[[-1, 1 ;; 3]]]}}, Axes -> True, AxesLabel -> {"X", "Y", "Z"}, BoxRatios -> {1, 1, 1},
+       PlotLabel -> "CoM (blue) and H (red), \[Mu]m", ImageSize -> 270], ListLinePlot[{Transpose[{ts, 10^6 st[[All, 1]]}], Transpose[{ts, 10^6 (forceCentre[#, ph][[1]] & /@ st)}]},
+       Frame -> True, FrameLabel -> {"t (ms)", "X (\[Mu]m)"}, PlotLabel -> "CoM (blue), H (orange)", ImageSize -> 270, PlotRange -> All]}}],
+    Grid[{{"levitation |grad T| (K/cm)", NumberForm[ph["gradT0 (K/cm)"], 4], "Kn", NumberForm[ph["Kn"], 3]},
+      {"z_c (um)", NumberForm[10^6 ph["zc"], 3], "M/xi0, I/c0 (ms)", Row[{NumberForm[1000 ph["tauV"], 3], ", ", NumberForm[1000 ph["tauR"], 3]}]},
+      {"pendulum f (Hz)", NumberForm[lm["pendulum f (Hz)"], 4], "pendulum decay (1/s)", NumberForm[lm["pendulum decay (1/s)"], 4]}}, Frame -> All, Alignment -> Left]}]],
+ {{rad, 20., "radius (\[Mu]m)"}, 5., 60.}, {{rhoc, 1., "density (g/cm\.b3)"}, 0.2, 2.5}, {{epsL, 0.5, "\[CurlyEpsilon] \[ScriptL]"}, -0.95, 0.95},
+ {{pT, 5., "pressure (Torr)"}, 0.5, 20.}, {{temp, 300., "T (K)"}, 200., 350.}, {{acc, 1., "accommodation a"}, 0.5, 1.},
+ {{fG, 1., "G/G0"}, 0.9, 1.1}, {{fr, 0., "trap f_r (Hz)"}, 0., 10.}, {{fz, 0., "trap f_z (Hz)"}, 0., 10.},
+ Delimiter, {{tilt0, 30., "initial tilt (deg)"}, 0., 179.}, {{spinX, 0., "spin about X (rad/s)"}, -2000., 2000.}, {{spinZ, 0., "spin about Z (rad/s)"}, -2000., 2000.},
+ {{tEnd, 60., "duration (ms)"}, 5., 1000.},
+ ContinuousAction -> False, SynchronousUpdating -> False, SaveDefinitions -> True, ControlPlacement -> Left]
+::Text::
+**Animation.** A particle rights itself from 60°, drawn with its density gradient (dark = heavy), body axis, CoM (black) and force centre H (red). Drag the time slider or press play.
+::Code::
+anim = With[{ph = ph0, run = simulate[ph0, 60, {0, 0, 0}, 50], l0 = ph0["radius"]},
+   Manipulate[Module[{st = run["state"][tm], R, x, sphere},
+      R = quatR[st[[7 ;; 10]]]; x = 10^6 st[[1 ;; 3]];
+      sphere = ParametricPlot3D[10^6 (st[[1 ;; 3]] + R.({0, 0, -ph["zc"]} + l0 {Sin[u] Cos[v], Sin[u] Sin[v], Cos[u]})), {u, 0, Pi}, {v, 0, 2 Pi}, Mesh -> None,
+        PlotPoints -> 25, ColorFunctionScaling -> False, ColorFunction -> Function[{xx, yy, zz, uu, vv}, Blend[{RGBColor[0.85, 0.92, 1], RGBColor[0.1, 0.25, 0.6]}, (1 + Sign[ph["epsL"]] Cos[uu])/2]]];
+      Show[sphere, Graphics3D[{{Black, Sphere[x, 1.2]}, {Red, Sphere[10^6 forceCentre[st, ph], 1.2]}, {Thick, Blue, Arrow[{x, x + 35 R.(Sign[ph["epsL"]] e3)}]},
+         {Gray, Dashed, Line[{x, x - {0, 0, 40}}]}}], PlotRange -> {{-40, 40}, {-40, 40}, {-40, 40}}, BoxRatios -> {1, 1, 1}, Lighting -> "Neutral",
+       PlotLabel -> Row[{"t = ", NumberForm[tm, {4, 1}], " ms,  heavy-axis tilt = ", NumberForm[heavyTilt[st[[7 ;; 10]], ph], {3, 1}], "\[Degree]"}], ImageSize -> 380]],
+    {{tm, 0, "time (ms)"}, 0, 50, 0.25, ControlType -> Animator, AnimationRunning -> False, AppearanceElements -> All}, SaveDefinitions -> True]]
+::Section::
+8. Summary
+::Code::
+Column[{Row[{"checks: ", Length[$verifications], "  (", Count[$verifications[[All, 3]], "VERIFIED"], " verified)"}],
+  Grid[Prepend[$verifications[[All, 1 ;; 3]], Style[#, Bold] & /@ {"item", "statement", "result"}], Frame -> All, Alignment -> Left, Background -> {None, {LightGray}}]}]
+::Item::
+- **Tensors.** A density-graded sphere is a sphere in the gas. Every anisotropy about its CoM comes from the offset of the force centre, $\boldsymbol{r}_H = -(\varepsilon\ell^2/5)\hat{e}_3$: an antisymmetric thermophoretic torque $\gamma_0[\boldsymbol{r}_H]_\times$, an antisymmetric drag coupling $-\xi_0[\boldsymbol{r}_H]_\times$, and a parallel-axis rotational drag $\xi_0z_c^2$.
+- **Steady state.** The particle levitates at $G_0 = Mg/\gamma_0$, independent of $\varepsilon$, heavy side down, at rest. It has no spin and no orbit, because the body is achiral and its thermophoretic torque only aligns it.
+- **Dynamics.** Disturbances decay as a damped pendulum with stiffness $Mgz_c$. For the defaults this is a few tens of Hz with $Q$ of order 1. The force centre H ends exactly where it started while the CoM swings underneath it.
+- **What would produce an orbit.** A steady spin needs a torque component along the spin axis, which requires chirality (for example a symmetric part of $\delta\mathbf{T}_{\rm th}$). A circular orbit additionally needs a lateral force that rotates with the body (see `OrbitStudy.ipynb`, Route A). Neither exists for this particle.
