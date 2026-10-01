@@ -1,0 +1,186 @@
+::Title::
+Shape 2: an ellipsoid with an offset centre of mass
+::Subtitle::
+Does moving the CoM off the centre of force, in any direction, give the chirality needed for orbits?
+::Text::
+The body is the near-spherical ellipsoid of Shape 1, now with a small linear density gradient that moves the centre of mass (CoM) off the geometric centre H. Since the ellipsoid is centrosymmetric, H is also its centre of force. As before, the gradient is uniform, $\nabla\ln T = -G\hat{Z}$, with no trap. The response $(\boldsymbol{F}, \boldsymbol{\tau}) = -\mathcal{R}\cdot(\nabla\ln T, \boldsymbol{v}, \boldsymbol{\omega})$ is taken about the CoM.
+::Note::
+**Results in brief.** (1) An offset along a principal axis gives symmetry $C_{2v}$, and an offset in a principal plane gives $C_s$. On a triaxial ellipsoid an offset in a generic direction leaves no symmetry at all ($C_1$), so the particle **is chiral**. (2) All four tensors follow exactly from those of Shape 1 by a rigid shift. In particular $\mathbf{T}_{\rm th} = -[\boldsymbol{r}_c]_\times\mathbf{f}_{\rm th}$. (3) This chirality is invisible to the gas. $\mathbf{T}_{\rm drag}^{-1}\mathbf{T}_{\rm th}$ never has a real non-zero eigenvalue, whatever the offset direction. The reason: at levitation the net gas force is vertical and acts through H, so it has no moment about the vertical. (4) The particle hangs with its CoM below H, as a damped pendulum, and then **glides in a straight line** (offset in a mirror plane or generic) or hovers (offset along an axis). (5) There is **no orbit** for any offset: $R = \infty$ and there is no period.
+::Section::
+1. Setup
+::Code::
+ClearAll["Global`*"];
+shapesDir = Quiet@Check[NotebookDirectory[], $Failed]; If[! StringQ[shapesDir], shapesDir = Environment["SHAPES_DIR"]];
+Get[FileNameJoin[{shapesDir, "ShapeLevitation.wl"}]];
+$verifications = {};
+record[ref_, claim_, status_, detail_] := (AppendTo[$verifications, {ref, claim, status, detail}]; VR[ref, claim, status, detail]);
+VR /: MakeBoxes[VR[ref_, claim_, status_, detail_], fmt_] := ToBoxes[Panel[Column[{Row[{Style[status, Bold, If[status == "VERIFIED", Darker[Green], Red]], "   ", Style[ref, Bold], ":  ", claim}], If[detail === "", Nothing, detail]}]], fmt];
+check[ref_String, claim_String, test_, detail_ : ""] := record[ref, claim, If[TrueQ[test], "VERIFIED", "DISCREPANCY"], detail];
+zeroQ[expr_] := AllTrue[Flatten[{Simplify[expr]}], PossibleZeroQ];
+sci[x_] := If[x == 0, "0", Module[{e = Floor[Log10[Abs[N[x]]]]}, ToString[NumberForm[N[x]/10^e, {3, 2}]] <> "e" <> ToString[e]]];
+num[x_, d_ : 4] := If[x != 0 && (Abs[x] < 10^-3 || Abs[x] >= 10^5), sci[x], ToString[NumberForm[N[x], d]]];
+vec[v_, d_ : 3] := "(" <> StringRiffle[num[#, d] & /@ v, ", "] <> ")";
+tf[m_] := TraditionalForm[MatrixForm[m]];
+n = {x, y, z};
+gas = gasModel[]; ell = 20*^-6; rhoP = 1000.;
+::Section::
+2. The shape and the mass distribution
+::Text::
+The surface is the ellipsoid of Shape 1, with semi-axes $a_i = 1 + \varepsilon e_i$ (units of $\ell$), defaults $\varepsilon = 0.1$ and $e = (1, 0, -1)$. The density is $\rho_p(1 + \kappa\,\hat{d}\cdot\boldsymbol{r}/\ell)$, with unit direction $\hat{d}$ and strength $\kappa$. Because $\oint r_ir_j\,dV = \frac{V}{5}a_i^2\ell^2\delta_{ij}$ for an ellipsoid, the CoM sits at
+::BoxMath::
+\boldsymbol{r}_c = \frac{\kappa\ell}{5}\,{\rm diag}(a_1^2, a_2^2, a_3^2)\,\hat{d} \qquad (\text{exact; } |\boldsymbol{r}_c| \approx 0.1\ell = 2\,\mu{\rm m}\;\text{for}\;\kappa = 0.5)
+::Code::
+a1 = 1 + eps e1; a2 = 1 + eps e2; a3 = 1 + eps e3;
+Rellipsoid[{x_, y_, z_}] := 1/Sqrt[x^2/a1^2 + y^2/a2^2 + z^2/a3^2];
+density[r_, dhat_, kappa_] := 1 + kappa dhat.r;
+defaults = {eps -> 1/10, e1 -> 1, e2 -> 0, e3 -> -1}; kappa0 = 0.5;
+Rnum[nn_List] := Rellipsoid[nn] /. defaults;
+offsets = <|"along x (C2v)" -> {1, 0, 0}, "in the x-z plane (Cs)" -> Normalize[{1, 0, 1}], "generic (C1, chiral)" -> Normalize[{1, 2, 3}]|>;
+Row[{"R(n) = ", TraditionalForm[Rellipsoid[n]], ",   rho/rho_p = ", TraditionalForm[density[{X, Y, Z}, {d1, d2, d3}, kappa]], ",   defaults ", defaults, ", kappa = ", kappa0}]
+::Text::
+Three offset directions represent the three symmetry classes that an offset can produce on a triaxial ellipsoid:
+::Table::
+offset direction $\hat{d}$ | symmetry of body + mass | surviving elements | chiral?
+along a principal axis, e.g. $\hat{x}$ | $C_{2v}$ | the two-fold axis along $\hat{d}$ and two mirror planes containing it | no
+in a principal plane, e.g. $(\hat{x} + \hat{z})/\sqrt{2}$ | $C_s$ | the mirror plane containing $\hat{d}$ | no
+generic, e.g. $(1, 2, 3)/\sqrt{14}$ | $C_1$ | none | **yes**
+::Text::
+(For a spheroid, $a_1 = a_2$, even a generic offset leaves the mirror plane that contains the symmetry axis and $\hat{d}$. So only a triaxial ellipsoid can be made chiral this way.) Next, build the three particles by numerical quadrature, and check the CoM formula and convexity.
+::Code::
+pts = Association[KeyValueMap[#1 -> makeParticle[Rnum, ell, rhoP, gas, Function[r, density[r, #2, kappa0]]] &, offsets]];
+pt0 = makeParticle[Rnum, ell, rhoP, gas];
+rcExact[dhat_] := kappa0 ell/5 DiagonalMatrix[N[{a1, a2, a3}^2 /. defaults]].dhat;
+Column[Join[{check["convex", "the surface (Shape 1) is convex", convexityMargin[Rnum] > 0]},
+   KeyValueMap[check["CoM " <> #1, "CoM = (kappa l/5) diag(a_i^2).d", Norm[#2["com"] - rcExact[offsets[#1]]] < 10^-9 ell,
+      "r_c/l = " <> vec[#2["com"]/ell, 4]] &, pts]]]
+::Section::
+3. Diagram
+::Text::
+Each panel shows the body coloured by $R - 1$ (red is long), the geometric centre H (black) and the CoM (magenta). The magenta arrow is $\boldsymbol{r}_c$ drawn 5 times longer than scale. In the chiral case the arrow leans out of every principal plane.
+::Code::
+Row[KeyValueMap[Show[shapeDiagram[Rnum, 5 #2["com"]/ell, PlotLabel -> #1, ImageSize -> 205], Graphics3D[{Magenta, Arrow[Tube[{{0, 0, 0}, 5 #2["com"]/ell}, 0.03]]}]] &, pts]]
+::Section::
+4. The four tensors
+::Text::
+The gas sees only the surface. Every stress therefore acts exactly as in Shape 1, about H, where $\mathbf{T}_{\rm th}^H = \mathbf{B}^H = 0$. Moving the reference point from H to the CoM changes the lever arm, $\boldsymbol{r}_H = -\boldsymbol{r}_c$, and the velocity of H, $\boldsymbol{v}_H = \boldsymbol{v} + \boldsymbol{\omega}\times\boldsymbol{r}_H$. The result is exact:
+::BoxMath::
+\mathbf{f}_{\rm th} = \mathbf{f}_{\rm th}^H , \qquad \mathbf{f}_{\rm drag} = \mathbf{f}_{\rm drag}^H , \qquad \mathbf{B} = \mathbf{f}_{\rm drag}[\boldsymbol{r}_c]_\times , \qquad \mathbf{B}^{\top} = -[\boldsymbol{r}_c]_\times\mathbf{f}_{\rm drag}
+::BoxMath::
+\mathbf{T}_{\rm th} = -[\boldsymbol{r}_c]_\times\,\mathbf{f}_{\rm th} \;\approx\; -\gamma_0[\boldsymbol{r}_c]_\times , \qquad \mathbf{T}_{\rm drag} = \mathbf{T}_{\rm drag}^H + [\boldsymbol{r}_c]_\times^{\top}\mathbf{f}_{\rm drag}[\boldsymbol{r}_c]_\times
+::Text::
+Here $\mathbf{f}_{\rm th}^H$, $\mathbf{f}_{\rm drag}^H$ and $\mathbf{T}_{\rm drag}^H$ are the diagonal first-order forms of Shape 1. At $a = 1$ they are $\gamma_0\,{\rm diag}[1 + \frac{2\varepsilon}{5}(2E - e_i)]$, $\xi_0\,{\rm diag}[1 + \frac{2\varepsilon}{5}(3E - 4e_i + 8(3e_i - E)/(8 + \pi))]$ and $c_0\,{\rm diag}[1 + \frac{4\varepsilon}{5}(2E - e_i)]$, with $E = \sum e_i$. The thermophoretic torque is **antisymmetric** to leading order: it is the moment about the CoM of a force $\gamma_0 G\boldsymbol{u}$ applied at H. The check below compares the full numerical quadrature about the CoM with these shift formulas.
+::Code::
+shiftRule[p0_, rc_] := Module[{b = p0["blocks"], X = hat[rc]},
+   <|"f_th" -> b["f_th"], "f_drag" -> b["f_drag"], "B" -> b["f_drag"].X, "Bt" -> -X.b["f_drag"], "T_th" -> -X.b["f_th"], "T_drag" -> b["T_drag"] + Transpose[X].b["f_drag"].X|>];
+Column[KeyValueMap[Module[{sr = shiftRule[pt0, #2["com"]], b = #2["blocks"]},
+     check["shift " <> #1, "quadrature tensors about the CoM equal the shift of the Shape 1 tensors",
+      Max[Norm[b["f_th"] - sr["f_th"]]/pt0["gamma0"], Norm[b["f_drag"] - sr["f_drag"]]/pt0["xi0"], Norm[b["B"] - sr["B"]]/(pt0["xi0"] ell),
+        Norm[b["Bt"] - sr["Bt"]]/(pt0["xi0"] ell), Norm[b["T_th"] - sr["T_th"]]/(pt0["gamma0"] ell), Norm[b["T_drag"] - sr["T_drag"]]/pt0["c0"]] < 10^-9]] &, pts]]
+::Text::
+The same result follows symbolically. The next cell runs the perturbation engine with the density written as $1 + \varepsilon(k_1x + k_2y + k_3z)$, so that the shape and the offset are both of order $\varepsilon$. It confirms $\mathbf{T}_{\rm th} = -[\boldsymbol{r}_c]_\times\mathbf{f}_{\rm th}$ through second order, including the shape × offset cross terms.
+::Code::
+shS = symbolicShape[1 + eps (e1 x^2 + e2 y^2 + e3 z^2), n, eps, 2, 1 + eps (k1 x + k2 y + k3 z)];
+Module[{b = shS["blocks"], rc = shS["com"], trunc2},
+ trunc2[m_] := Map[Normal[Series[#, {eps, 0, 2}]] &, m, {2}];
+ Column[{
+   Row[{"r_c/l = ", TraditionalForm[Simplify[rc]]}],
+   Row[{"(T_th)_12/(gamma0 l) = ", TraditionalForm[Simplify[b["T_th"][[1, 2]]]]}],
+   check["symbolic", "T_th = -[r_c]x f_th through O(eps^2), with r_c = (eps/5)(k_i (1 + 2 eps e_i))", zeroQ[trunc2[b["T_th"] + hat[rc].b["f_th"]]] &&
+     zeroQ[rc - eps/5 Table[{k1, k2, k3}[[i]] (1 + 2 eps {e1, e2, e3}[[i]]), {i, 3}]]]}]]
+::Text::
+The default particles give these numbers (SI; the offset breaks no symmetry of $\mathbf{f}_{\rm th}$ or $\mathbf{f}_{\rm drag}$):
+::Code::
+Grid[Prepend[KeyValueMap[{#1, tf[Round[#2["blocks"]["T_th"]/(#2["gamma0"] ell), 10.^-4]], tf[Round[#2["blocks"]["T_drag"]/#2["c0"], 10.^-4]]} &, pts],
+  {"offset", "T_th/(gamma0 l)", "T_drag/c0"}], Frame -> All, Alignment -> Center]
+::Section::
+5. Why a mass offset cannot make the particle spin
+::Text::
+A steady spin $\boldsymbol{\omega} = \Omega\boldsymbol{u}$ about the vertical needs a real eigenpair $\mathbf{T}_{\rm drag}^{-1}\mathbf{T}_{\rm th}\boldsymbol{u} = \lambda\boldsymbol{u}$ with $\lambda \neq 0$ (then $\Omega = \lambda G$). Insert $\mathbf{T}_{\rm th} = -[\boldsymbol{r}_c]_\times\mathbf{f}_{\rm th}$ and take the dot product with $\mathbf{f}_{\rm th}\boldsymbol{u}$:
+::BoxMath::
+\lambda\,\boldsymbol{u}^{\top}\mathbf{f}_{\rm th}\mathbf{T}_{\rm drag}\boldsymbol{u} = -(\mathbf{f}_{\rm th}\boldsymbol{u})\cdot\big(\boldsymbol{r}_c\times\mathbf{f}_{\rm th}\boldsymbol{u}\big) = 0 \quad\Rightarrow\quad \lambda = 0
+::Text::
+The conclusion holds whenever the symmetric part of $\mathbf{f}_{\rm th}\mathbf{T}_{\rm drag}$ is positive-definite, which is always true for a near-sphere ($\approx\gamma_0c_0\mathbf{I}$). The only real eigenvalue is therefore $\lambda = 0$, with $\mathbf{f}_{\rm th}\boldsymbol{u} \parallel \boldsymbol{r}_c$: the hanging orientation. The other two eigenvalues form a complex pair $\approx \pm i\gamma_0|\boldsymbol{r}_c|/c_0$, a pendulum oscillation. Physically, every gas force acts through H. At levitation the total gas force balances gravity and is vertical, and a vertical force through H has no moment about the vertical axis through the CoM. So there is never a spin-driving torque, whichever way the offset points.
+::Code::
+Column[KeyValueMap[Module[{ev = Eigenvalues[Inverse[#2["blocks"]["T_drag"]].#2["blocks"]["T_th"]], mu = #2["gamma0"] Norm[#2["com"]]/#2["c0"]},
+     check["spectrum " <> #1, "eigenvalues of T_drag^-1 T_th are 0 and a complex pair ~ +-i gamma0 |r_c|/c0",
+      Count[ev, e_ /; Abs[Im[e]] < 10^-9 Abs[mu]] == 1 && Min[Abs[ev]] < 10^-9 mu && Abs[Max[Abs[Im[ev]]]/mu - 1] < 0.1 &&
+       Min[Eigenvalues[(#2["blocks"]["f_th"].#2["blocks"]["T_drag"] + Transpose[#2["blocks"]["f_th"].#2["blocks"]["T_drag"]])/2]] > 0,
+      "eigenvalues/(gamma0 |r_c|/c0) = " <> StringRiffle[ToString[NumberForm[Chop[#/mu, 10^-10], 4]] & /@ ev, ",  "]]] &, pts]]
+::Section::
+6. Steady states: hang, then glide or hover
+::Text::
+With no spin available, the steady states are non-rotating. The solver `steadyMotions` imposes exact body-frame balance of force and torque, including the drag torque of the glide velocity about the CoM ($\mathbf{B}^{\top}\boldsymbol{v}$), together with $\boldsymbol{u}\cdot\boldsymbol{v} = 0$. It then linearises the full rigid-body equations about each solution. For each offset it finds two states: CoM below H (stable) and CoM above H (unstable).
+::Code::
+steady = Association[KeyValueMap[#1 -> steadyMotions[#2] &, pts]];
+hang = Association[KeyValueMap[#1 -> First@Select[#2, #["stable"] &] &, steady]];
+Grid[Prepend[KeyValueMap[{#1, vec[Chop[#2["u"], 10^-9]], num[#2["Omega"]], num[1000 Chop[#2["vperp"], 10^-9]],
+      If[#2["vperp"] > 10^-9, vec[Normalize[#2["v_body"] - (#2["v_body"].#2["u"]) #2["u"]]], "-"], num[Max[Abs[Im[#2["rates"]]]]/(2 Pi)]} &, hang],
+   {"offset", "u = lab Z in body axes", "Omega (rad/s)", "glide (mm/s)", "glide direction (body)", "pendulum f (Hz)"}],
+  Frame -> All, Alignment -> Center]
+::Text::
+The hanging vertical is exactly $\boldsymbol{u} = -\hat{\boldsymbol{r}}_c$, with the CoM straight below H. The reason: in steady state the total gas force equals $Mg\boldsymbol{u}$ and acts through H, so its moment about the CoM vanishes only if H lies on the vertical through the CoM. (The zero eigenvector of $\mathbf{T}_{\rm th}$ alone, $\mathbf{f}_{\rm th}\boldsymbol{u} \parallel \boldsymbol{r}_c$, differs slightly. The drag torque of the glide, $\mathbf{B}^{\top}\boldsymbol{v}$, makes up the difference.) For the axial offset $\boldsymbol{u}$ is a principal axis and the particle hovers. For the in-plane and generic offsets it glides, at the speed Shape 1 predicts for that orientation, $\boldsymbol{v}_\perp \approx (Mg/\xi_0)[(\mathbf{f}_{\rm th}/\gamma_0 - \mathbf{I})\boldsymbol{u}]_\perp$. In the mirror-symmetric ($C_s$) case the glide stays in the mirror plane. In the chiral ($C_1$) case it points in a generic direction. It is still a straight line.
+::Code::
+Column[Join[
+  KeyValueMap[Module[{u = #2["u"], rc = pts[#1]["com"], p = pts[#1], lo},
+     lo = p["M"] $gEarth/p["xi0"] Module[{w = (p["blocks"]["f_th"]/p["gamma0"] - IdentityMatrix[3]).u}, Norm[w - (w.u) u]];
+     check["hang " <> #1, "stable state: Omega = 0, CoM exactly below H, glide speed matches the first-order formula",
+      #2["Omega"] == 0 && u.rc < 0 && VectorAngle[u, -rc] < 10^-6 && Abs[#2["vperp"] - lo] < 0.1 lo + 10^-9,
+      "angle between u and -r_c: " <> num[VectorAngle[u, -rc]/Degree] <> " deg; glide " <> num[1000 #2["vperp"]] <> " mm/s, formula " <> num[1000 lo] <> " mm/s"]] &, hang],
+  {check["mirror", "Cs offset: the glide lies in the mirror plane (y-component zero)", Abs[hang["in the x-z plane (Cs)"]["v_body"][[2]]] < 10^-12],
+   check["unstable", "each offset also has an inverted state (CoM above H), which is unstable", AllTrue[Values[steady], Count[#, s_ /; ! s["stable"]] >= 1 &]]}]]
+::Section::
+7. Simulated trajectories
+::Text::
+Each particle starts at rest, with its vertical tilted 30° away from the hanging orientation, at the hanging state's levitation gradient. The full nonlinear equations show a damped pendulum swing, with no net spin, followed by steady straight-line motion. That motion is a hover for the axial offset and a glide for the other two.
+::Code::
+runs = Association[KeyValueMap[Module[{u = #2["u"], q0, tiltAxis},
+      tiltAxis = Normalize[Cross[u, If[Abs[u[[2]]] < 0.9, {0, 1, 0}, {1, 0, 0}]]];
+      q0 = qFromTo[RotationMatrix[30 Degree, tiltAxis].u, {0, 0, 1}];
+      #1 -> simulate[pts[#1], #2["G"], q0, {0, 0, 0}, 1.]] &, hang]];
+uLab[st_] := Transpose[quatR[st[[7 ;; 10]]]].{0, 0, 1};
+Module[{ts = Subdivide[0., 1., 1000], cols = {RGBColor[0.2, 0.4, 0.8], RGBColor[0.9, 0.5, 0.1], RGBColor[0.2, 0.65, 0.3]}},
+ Column[{
+   Row[{ListLinePlot[KeyValueMap[Function[{key, hs}, Transpose[{1000 ts, Table[VectorAngle[uLab[runs[key]["state"][t]], hs["u"]]/Degree, {t, ts}]}]], hang], PlotRange -> {{0, 150}, All},
+      Frame -> True, FrameLabel -> {"t (ms)", "angle from hanging orientation (deg)"}, PlotLegends -> Placed[Keys[hang], Below], PlotStyle -> cols, ImageSize -> 340,
+      PlotLabel -> "pendulum ringdown"],
+     ListLinePlot[KeyValueMap[Function[{key, hs}, Table[10^6 runs[key]["state"][t][[1 ;; 2]], {t, ts}]], hang], AspectRatio -> Automatic, Frame -> True, FrameLabel -> {"X (um)", "Y (um)"},
+      PlotStyle -> cols, ImageSize -> 340, PlotLabel -> "top view of the CoM, 1 s", PlotRange -> All]}],
+   Sequence @@ KeyValueMap[Module[{st = runs[#1]["state"][1.], vpred},
+       vpred = quatR[st[[7 ;; 10]]].#2["v_body"];
+       check["run " <> #1, "after 1 s: no spin, orientation = hanging state, velocity = steady prediction",
+        Norm[st[[11 ;; 13]]] < 10^-6 && VectorAngle[uLab[st], #2["u"]] < 10^-5 && Norm[st[[4 ;; 6]] - vpred] < 10^-6 Max[Norm[vpred], 10^-6],
+        "|omega| = " <> sci[Norm[st[[11 ;; 13]]]] <> " rad/s, horizontal speed " <> num[1000 Norm[st[[4 ;; 5]]]] <> " mm/s"]] &, hang]}]]
+::Text::
+The pendulum frequency is set by the stiffness $Mg|\boldsymbol{r}_c|$ and the moment of inertia, as for the graded sphere. The ringdown takes a few tens of milliseconds. Afterwards the chiral particle moves exactly like an achiral one. Its orientation is locked, it has no spin, and its horizontal velocity is constant.
+::Code::
+With[{mesh = bodyMesh[Rnum], states = Table[runs["generic (C1, chiral)"]["state"][t], {t, 0., 1., 0.005}],
+   rng = 10^6 runs["generic (C1, chiral)"]["state"][1.][[1 ;; 3]]},
+ Manipulate[Module[{st = states[[k]], x},
+   x = 10^6 st[[1 ;; 3]];
+   Graphics3D[{drawBody[mesh, x, quatR[st[[7 ;; 10]]], 60], If[k > 1, {Gray, Thick, Line[10^6 states[[1 ;; k, 1 ;; 3]]]}, Nothing]},
+    PlotRange -> Transpose[{Min[#, 0] - 120 & /@ rng, Max[#, 0] + 120 & /@ rng}], BoxRatios -> Automatic, Lighting -> "Neutral", Axes -> True,
+    AxesLabel -> {"X (um)", "Y", "Z"}, PlotLabel -> Row[{"chiral (C1) offset,  t = ", 5 (k - 1), " ms"}], ImageSize -> 520]],
+  {{k, 1, "frame (5 ms steps)"}, 1, 201, 1, ControlType -> Animator, AnimationRunning -> False}, SaveDefinitions -> True]]
+::Section::
+8. Orbital radius and period
+::Text::
+**Not applicable, for every offset direction.** The steady states have $\Omega = 0$ exactly, so the orbital radius is infinite and there is no orbital period. The table below lists what the particle does instead.
+::Code::
+Grid[Prepend[KeyValueMap[{#1, "0", "infinite", "none", If[#2["vperp"] < 10^-9, "hover", "straight glide at " <> num[1000 #2["vperp"]] <> " mm/s"]} &, hang],
+  {"offset", "spin Omega (rad/s)", "orbital radius", "period", "motion"}], Frame -> All, Alignment -> Left]
+::Section::
+9. Answer: can an offset direction give chirality?
+::Item::
+- **Geometrically, yes.** On a triaxial ellipsoid, any offset that lies neither on a principal axis nor in a principal plane leaves no symmetry element. The particle (surface plus mass) is then chiral, $C_1$.
+- **Dynamically, no.** The gas sees only the surface, which is centrosymmetric, so the gas wrench about H has no polar–axial coupling. About the CoM the thermophoretic torque is the moment of a force through H, $\mathbf{T}_{\rm th} = -[\boldsymbol{r}_c]_\times\mathbf{f}_{\rm th}$. Such a torque can only align the particle, never spin it: $\mathbf{T}_{\rm drag}^{-1}\mathbf{T}_{\rm th}$ has eigenvalues $\{0, \pm i\mu\}$ for every offset.
+- **What is needed instead.** The chirality has to be in the *surface*, so that the gas forces themselves form a chiral pattern with a moment about the vertical. Shape 3 builds such a surface from spherical harmonics.
+::Section::
+10. Summary
+::Code::
+Column[{Row[{"checks: ", Length[$verifications], "  (", Count[$verifications[[All, 3]], "VERIFIED"], " verified)"}],
+  Grid[Prepend[$verifications[[All, 1 ;; 3]], Style[#, Bold] & /@ {"item", "statement", "result"}], Frame -> All, Alignment -> Left, Background -> {None, {LightGray}}]}]
+::Item::
+- **Shape.** `Rellipsoid` of Shape 1 with density `1 + kappa dhat.r`. Defaults: $\varepsilon = 0.1$, $e = (1, 0, -1)$, $\kappa = 0.5$ ($|\boldsymbol{r}_c| \approx 2\,\mu$m).
+- **Tensors.** $\mathbf{f}_{\rm th}$ and $\mathbf{f}_{\rm drag}$ are as in Shape 1. The others are $\mathbf{T}_{\rm th} = -[\boldsymbol{r}_c]_\times\mathbf{f}_{\rm th}$, $\mathbf{B} = \mathbf{f}_{\rm drag}[\boldsymbol{r}_c]_\times$ and $\mathbf{T}_{\rm drag} = \mathbf{T}_{\rm drag}^H + [\boldsymbol{r}_c]_\times^{\top}\mathbf{f}_{\rm drag}[\boldsymbol{r}_c]_\times$, all exact.
+- **Motion.** The particle swings as a damped pendulum into the CoM-below-H orientation. It then hovers (axial offset) or glides in a straight line (in-plane or generic offset).
+- **Orbit.** None for any offset: a chiral mass distribution is not enough, and the chirality must be in the surface.

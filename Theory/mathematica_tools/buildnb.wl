@@ -38,21 +38,27 @@ outputCells[res_] := Which[
    Flatten[If[MatchQ[#, _Global`VR], vrCell[#], Cell[BoxData[ToBoxes[#, StandardForm]], "Output"]] & /@ If[Head[res] === Column, First[res], res]],
    True, {Cell[BoxData[ToBoxes[res, StandardForm]], "Output"]}];
 
-$msgLog = {};
-runCode[code_String] := Module[{prints = {}, ed},
+$msgLog = {}; $userPath = {"System`", "Global`"};
+$progress = Environment["BUILD_PROGRESS"];
+runCode[code_String] := Module[{prints = {}, ed, t0 = AbsoluteTime[], out},
    ed = Block[{Print = Function[Null, AppendTo[prints, Row[{##}]]; Null]},
-      Block[{$Context = "Global`", $ContextPath = {"System`", "Global`"}}, EvaluationData[ToExpression[code, InputForm]]]];
+      Block[{$Context = "Global`", $ContextPath = $userPath}, With[{r = EvaluationData[ToExpression[code, InputForm]]}, $userPath = $ContextPath; r]]];
    If[Lookup[ed, "MessagesText", {}] =!= {}, AppendTo[$msgLog, {StringTake[code, UpTo[90]], ed["MessagesText"]}]];
-   Join[{Cell[parseBoxes[code], "Input"]},
+   If[StringQ[$progress], WriteString[$progress, "eval ", Round[AbsoluteTime[] - t0, 0.01], " s: ", StringTake[StringReplace[code, "\n" -> " "], UpTo[70]], "\n"]];
+   out = Join[{Cell[parseBoxes[code], "Input"]},
     Cell[BoxData[ToBoxes[#, StandardForm]], "Print"] & /@ prints,
     Cell[#, "Message", "MSG", FontColor -> Red] & /@ Lookup[ed, "MessagesText", {}],
-    outputCells[ed["Result"]]]];
+    outputCells[ed["Result"]]];
+   If[StringQ[$progress], WriteString[$progress, "   boxes done ", Round[AbsoluteTime[] - t0, 0.01], " s\n"]];
+   out];
 
 UsingFrontEnd[
   Module[{t0 = AbsoluteTime[], flat, nb},
    flat = Flatten[Replace[cells, CodeCell[s_String] :> runCode[s], {1}]];
    nb = NotebookPut[Notebook[flat, WindowSize -> {1150, 950}, StyleDefinitions -> "Default.nb"]];
+   If[StringQ[$progress], WriteString[$progress, "saving\n"]];
    NotebookSave[nb, outNB];
+   If[StringQ[$progress], WriteString[$progress, "saved\n"]];
    If[outPDF =!= "none", Export[outPDF, nb]];
    Print["built ", Length[flat], " cells in ", Round[AbsoluteTime[] - t0, 0.1], " s"];
    If[ValueQ[Global`$verifications], Print["verification tally: ", Counts[Global`$verifications[[All, 3]]]];

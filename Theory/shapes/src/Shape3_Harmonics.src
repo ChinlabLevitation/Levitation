@@ -1,0 +1,333 @@
+::Title::
+Shape 3: spherical-harmonic perturbations, from no torque to orbits
+::Subtitle::
+Adding harmonics to a sphere one degree at a time, to find the simplest surface chiral enough to spin and orbit
+::Text::
+The body is a sphere whose radius is perturbed by real spherical harmonics, $R(\hat{n}) = 1 + \varepsilon s(\hat{n})$ (units of the mean radius $\ell$), with uniform density. Shapes 1 and 2 showed that neither an ellipsoid nor an ellipsoid with an offset centre of mass (CoM) can spin: the chirality has to be in the surface. This notebook climbs the harmonic ladder. It first uses symmetry to show where a spin-driving torque can first appear, then confirms each step with the exact perturbation engine. Finally it builds the simplest shape that spins, and the simplest that orbits. As before the gradient is uniform, $\nabla\ln T = -G\hat{Z}$, with no trap.
+::Note::
+**Results in brief.** (1) The thermophoretic torque about the CoM vanishes at first order for every harmonic. At second order it comes only from products of harmonics of neighbouring degree $l$, $l + 1$ with $l \ge 2$; the simplest is **$l = 2 \times l = 3$**. (2) The degrees taken singly give nothing useful. $l = 1$ is just a displaced sphere, and $l = 2$ is the ellipsoid of Shape 1. $l = 3$ alone has no symmetric (spin-driving) torque until $O(\varepsilon^5)$. (3) **Ellipsoid + $xyz$ twist** ($D_2$, chiral) gives $\mathbf{T}_{\rm th} \propto b\varepsilon^2\,{\rm diag}(q_{yy} - q_{zz}, q_{zz} - q_{xx}, q_{xx} - q_{yy})$. It **spins steadily** about a principal axis, but by symmetry it cannot orbit. (4) **Tilting the ellipsoid relative to the twist** (symmetry $C_2$) leaves the stable spin axis off every symmetry axis, and the particle **orbits**. For $\varepsilon = 0.1$, a 20° tilt and $b = 3$ on a 20 µm, 1 g/cm³ particle at 5 Torr: **radius 24.5 µm, period 0.436 s, clockwise seen from above**. (5) To leading order $R \propto \ell/\varepsilon$, independent of pressure and particle density, while the period scales as $P/(\rho_p\varepsilon^2)$.
+::Section::
+1. Setup
+::Code::
+ClearAll["Global`*"];
+shapesDir = Quiet@Check[NotebookDirectory[], $Failed]; If[! StringQ[shapesDir], shapesDir = Environment["SHAPES_DIR"]];
+Get[FileNameJoin[{shapesDir, "ShapeLevitation.wl"}]];
+$verifications = {};
+record[ref_, claim_, status_, detail_] := (AppendTo[$verifications, {ref, claim, status, detail}]; VR[ref, claim, status, detail]);
+VR /: MakeBoxes[VR[ref_, claim_, status_, detail_], fmt_] := ToBoxes[Panel[Column[{Row[{Style[status, Bold, If[status == "VERIFIED", Darker[Green], Red]], "   ", Style[ref, Bold], ":  ", claim}], If[detail === "", Nothing, detail]}]], fmt];
+check[ref_String, claim_String, test_, detail_ : ""] := record[ref, claim, If[TrueQ[test], "VERIFIED", "DISCREPANCY"], detail];
+zeroQ[expr_] := AllTrue[Flatten[{Simplify[expr]}], PossibleZeroQ];
+sci[x_] := If[x == 0, "0", Module[{e = Floor[Log10[Abs[N[x]]]]}, ToString[NumberForm[N[x]/10^e, {3, 2}]] <> "e" <> ToString[e]]];
+num[x_, d_ : 4] := If[x != 0 && (Abs[x] < 10^-3 || Abs[x] >= 10^5), sci[x], ToString[NumberForm[N[x], d]]];
+vec[v_, d_ : 3] := "(" <> StringRiffle[num[#, d] & /@ Chop[v, 10^-9], ", "] <> ")";
+tf[m_] := TraditionalForm[MatrixForm[m]];
+n = {x, y, z}; r2 = x^2 + y^2 + z^2;
+gas = gasModel[]; ell = 20*^-6; rhoP = 1000.;
+toR[sexpr_, e_] := Module[{f}, f = Function @@ {{x, y, z}, N[1 + e sexpr]}; f @@ # &];   (* built with Apply so that x, y, z are not renamed *)
+uLab[st_] := Transpose[quatR[st[[7 ;; 10]]]].{0, 0, 1};
+::Section::
+2. The shapes
+::Text::
+The surface is $\boldsymbol{r} = \ell R(\hat{n})\hat{n}$, with $\hat{n} = (x, y, z)$ the unit direction:
+::Code::
+Rharm[s_] := 1 + eps s;          (* s: a polynomial in the unit normal (x, y, z) *)
+Y1 = {x, y, z};
+Y2[Q_] := n.Q.n;                  (* Q symmetric and traceless *)
+Y3 = {x y z, z (x^2 - y^2), x (x^2 - 3 y^2), y (3 x^2 - y^2), x (5 z^2 - r2), y (5 z^2 - r2), z (5 z^2 - 3 r2)};
+Column[{Row[{"R(n) = ", TraditionalForm[Rharm[s]]}], Row[{"l = 3 basis: ", TraditionalForm[Y3]}],
+  check["harmonic", "the l = 3 basis polynomials are harmonic (zero Laplacian), so each is a pure l = 3 spherical harmonic", zeroQ[Laplacian[#, n] & /@ Y3]]}]
+::Text::
+The $l = 3$ polynomials are written homogeneously ($r_2 = x^2 + y^2 + z^2$, which equals 1 on the surface) so that the Laplacian test applies. The shapes studied, in order, are:
+::Table::
+step | $s(\hat{n})$ | symmetry | result
+1 | $z$ ($l = 1$) | $C_{\infty v}$ | a displaced sphere: no torque
+2 | $\hat{n}^{\top}\mathbf{Q}\hat{n}$ ($l = 2$) | $D_{2h}$ | the ellipsoid of Shape 1: no torque
+3 | $\sum_m c_m Y_{3m}$ ($l = 3$) | generic | no spin torque until $O(\varepsilon^5)$
+4 | $\hat{n}^{\top}\mathbf{Q}\hat{n} + b\,xyz$ ($l = 2 + 3$) | general | first chiral torque, $O(\varepsilon^2)$
+5 | $\hat{n}^{\top}\mathbf{Q}_0\hat{n} + b\,xyz$, $\mathbf{Q}_0$ diagonal | $D_2$ | steady spin, no orbit
+6 | $\hat{n}^{\top}\mathbf{Q}(\chi)\hat{n} + b\,xyz$, $\mathbf{Q}$ tilted by $\chi$ | $C_2$ | steady spin and circular orbit
+::Section::
+3. Where a spin torque can come from: selection rules
+::Text::
+A steady spin about the vertical needs a real, non-zero eigenvalue of $\mathbf{T}_{\rm drag}^{-1}\mathbf{T}_{\rm th}$, which in practice means a symmetric part of $\mathbf{T}_{\rm th}$ about the CoM. Two symmetry facts decide where that can first appear.
+::Item::
+- **Parity.** $\mathbf{T}_{\rm th}$ maps a polar vector (the gradient) to an axial vector (the torque), so it changes sign under inversion. Inversion multiplies a degree-$l$ harmonic by $(-1)^l$. A term of order $\varepsilon^k$ built from harmonics $l_1, \ldots, l_k$ can therefore contribute only if $l_1 + \cdots + l_k$ is odd.
+- **Rank.** $\mathbf{T}_{\rm th}$ is a rank-2 tensor: its trace, antisymmetric part and symmetric traceless part carry angular momentum 0, 1 and 2. A term linear in one harmonic of degree $l$ can contribute only if $l \le 2$. Combined with parity, only $l = 1$ survives, and $l = 1$ is a rigid translation that moves the CoM along with the surface. So **$\mathbf{T}_{\rm th} = O(\varepsilon^2)$ about the CoM for any uniform-density shape.**
+- **Second order.** A product of degrees $l$ and $l'$ needs $l + l'$ odd and $|l - l'| \le 2$, so $l' = l \pm 1$. Products involving $l = 1$ are translations of the lower-order shape. The **simplest chiral pair is $l = 2 \times l = 3$**. The trace (a pseudoscalar, the "screw" part) needs $l = l'$, so at $O(\varepsilon^2)$ the torque is **traceless**.
+- **One degree alone.** A single even degree is centrosymmetric at every order, so it gives no torque (Shape 1). A single odd degree first contributes at $O(\varepsilon^3)$. For $l = 3$ the totally symmetric cubic coupling vanishes, and the symmetric part is pushed to $O(\varepsilon^5)$ (Step 3 below).
+::Section::
+4. Steps 1 to 3: single harmonics
+::Text::
+**Step 1, $l = 1$: $s = z$.** To first order this is the unit sphere displaced by $\varepsilon\hat{z}$. The CoM moves with it, so nothing changes about the CoM. The engine is run to third order.
+::Code::
+sh1 = symbolicShape[Rharm[z], n, eps, 3];
+Column[{Row[{"CoM/l = ", TraditionalForm[sh1["com"]], "     f_th/gamma0 = ", tf[sh1["blocks"]["f_th"]]}],
+  check["l = 1", "s = z: T_th = 0 about the CoM through O(eps^3); the CoM moves by eps", zeroQ[sh1["blocks"]["T_th"]] && zeroQ[Coefficient[sh1["com"], eps, 1] - {0, 0, 1}]]}]
+::Text::
+The anisotropy of $\mathbf{f}_{\rm th}$ at $O(\varepsilon^2)$ is the $l = 2$ content of the displaced-sphere expansion, $1 + \varepsilon\cos\theta = $ (sphere shifted by $\varepsilon$) $+ \frac{\varepsilon^2}{2}\sin^2\theta + \ldots$.
+::Text::
+**Step 2, $l = 2$: $s = \hat{n}^{\top}\mathbf{Q}\hat{n}$.** To first order this is the ellipsoid with semi-axes $1 + \varepsilon q_i$ (the eigenvalues of $\mathbf{Q}$). Even at second order the shape is centrosymmetric, so the torque vanishes identically.
+::Code::
+Qg = {{qxx, qxy, qxz}, {qxy, qyy, qyz}, {qxz, qyz, -qxx - qyy}};
+sh2 = symbolicShape[Rharm[Y2[Qg]], n, eps, 2];
+check["l = 2", "s = n.Q.n (general Q): T_th = B = 0 and CoM = 0 through O(eps^2)", zeroQ[{sh2["blocks"]["T_th"], sh2["blocks"]["B"], sh2["com"]}]]
+::Text::
+**Step 3, $l = 3$: $s = \sum_m c_mY_{3m}$, all seven components.** At first order an $l = 3$ harmonic changes *no* tensor at all, because no rank-2 tensor can be built linearly from it. At second order the product $3 \times 3$ is even, so the torque still vanishes.
+::Code::
+cs = Array[c, 7]; sh3 = symbolicShape[Rharm[cs.Y3], n, eps, 2];
+Column[{
+  check["l = 3, first order", "an l = 3 harmonic leaves every tensor and the CoM unchanged at O(eps)", zeroQ[Coefficient[{sh3["blocks"]["f_th"], sh3["blocks"]["f_drag"], sh3["blocks"]["T_drag"], sh3["blocks"]["B"], sh3["com"]}, eps, 1]]],
+  check["l = 3, second order", "T_th = 0 through O(eps^2) for a general l = 3 surface", zeroQ[sh3["blocks"]["T_th"]]]}]
+::Text::
+Beyond second order the exact quadrature gives the answer. For a generic (chiral) $l = 3$ combination, the torque's antisymmetric part grows as $\varepsilon^3$. That part is only a pendulum-like offset between the CoM and the centre of force, and cannot drive a spin. The symmetric part grows as $\varepsilon^5$, which is negligible in practice.
+::Code::
+s3gen = {1, 0.7, 0.4, -0.3, 0.25, 0.15, -0.2}.Y3;
+l3scan = Table[Module[{p = makeParticle[toR[s3gen, e], ell, rhoP, gas], T},
+    T = p["blocks"]["T_th"]/(p["gamma0"] ell); {e, Norm[(T + Transpose[T])/2], Norm[(T - Transpose[T])/2]}], {e, {0.02, 0.04, 0.08}}];
+Column[{
+  Grid[Prepend[{#[[1]], sci[#[[2]]], sci[#[[3]]]} & /@ l3scan, {"eps", "|sym T_th|/(gamma0 l)", "|antisym T_th|/(gamma0 l)"}], Frame -> All],
+  check["l = 3 scaling", "generic l = 3 alone: antisymmetric torque ~ eps^3, symmetric torque ~ eps^5",
+   Abs[Log[2, l3scan[[3, 3]]/l3scan[[2, 3]]] - 3] < 0.3 && Abs[Log[2, l3scan[[3, 2]]/l3scan[[2, 2]]] - 5] < 0.3,
+   "local exponents: antisymmetric " <> num[Log[2, l3scan[[3, 3]]/l3scan[[2, 3]]], 3] <> ", symmetric " <> num[Log[2, l3scan[[3, 2]]/l3scan[[2, 2]]], 3]]}]
+::Section::
+5. Step 4: the first chiral torque, $l = 2 \times l = 3$
+::Text::
+Combine a general quadrupole $\mathbf{Q}$ with the simplest $l = 3$ harmonic, $xyz$ (which on its own is the achiral tetrahedral shape), and keep the accommodation coefficient $a$ general:
+::Code::
+sh4 = symbolicShape[Rharm[Y2[Qg] + b x y z], n, eps, 2, 1, "Accommodation" -> a];
+T4 = FullSimplify[Coefficient[sh4["blocks"]["T_th"], eps, 2]];
+Column[{Row[{"T_th/(gamma0 l eps^2) = ", tf[T4]}], Row[{"CoM/l = ", TraditionalForm[sh4["com"]]}]}]
+::Text::
+Split into its symmetric and antisymmetric parts, the result is
+::BoxMath::
+\mathbf{T}_{\rm th} = \gamma_0\ell\varepsilon^2\Big[-\frac{3(4 - 3a)b}{35}\,{\rm diag}\big(q_{yy} - q_{zz},\, q_{zz} - q_{xx},\, q_{xx} - q_{yy}\big) + \frac{2(7 - 4a)b}{35}[\boldsymbol{w}]_\times\Big] , \qquad \boldsymbol{w} = (q_{yz}, q_{zx}, q_{xy})
+::BoxMath::
+\boldsymbol{r}_c = \frac{6b}{35}\,\varepsilon^2\ell\,\boldsymbol{w}
+::Text::
+Two features stand out. The **symmetric part** is the spin-driving chirality. It is traceless, as the selection rules require, and depends only on the *diagonal* of $\mathbf{Q}$ in the frame of the $xyz$ harmonic, through the cyclic differences $q_{yy} - q_{zz}$ and so on. The **antisymmetric part** comes from the off-diagonal elements of $\mathbf{Q}$. At $a = 1$ it is exactly $\gamma_0[\boldsymbol{r}_c]_\times$: the $2 \times 3$ product also shifts the CoM, by $\boldsymbol{r}_c \propto \boldsymbol{w}$. The factor $4 - 3a$ is again $\propto C_n - C_t$. The other tensors keep their ellipsoid forms at first order, since the $l = 3$ part enters only at $O(\varepsilon^2)$:
+::BoxMath::
+\mathbf{f}_{\rm th} = \gamma_0\Big[\mathbf{I} - \tfrac{2(4 - 3a)}{5}\varepsilon\mathbf{Q}\Big] , \qquad \mathbf{f}_{\rm drag} = \xi_0\Big[\mathbf{I} - \tfrac{2}{5}\Big(4 - \frac{24a}{8 + \pi a}\Big)\varepsilon\mathbf{Q}\Big] , \qquad \mathbf{T}_{\rm drag} = c_0\Big[\mathbf{I} - \tfrac{4}{5}\varepsilon\mathbf{Q}\Big] , \qquad \mathbf{B} = O(\varepsilon^2)
+::Code::
+Module[{b1 = Map[Coefficient[#, eps, 1] &, sh4["blocks"], {3}]},
+ Column[{
+   check["T_th (2 x 3)", "symmetric part -(3(4 - 3a)b/35) diag(q_yy - q_zz, q_zz - q_xx, q_xx - q_yy); antisymmetric part (2(7 - 4a)b/35)[w]x",
+    zeroQ[T4 - (-3 (4 - 3 a) b/35 DiagonalMatrix[{qyy - (-qxx - qyy), (-qxx - qyy) - qxx, qxx - qyy}] + 2 (7 - 4 a) b/35 hat[{qyz, qxz, qxy}])]],
+   check["CoM (2 x 3)", "r_c = (6b/35) eps^2 l (q_yz, q_zx, q_xy); at a = 1 the antisymmetric torque is gamma0 [r_c]x",
+    zeroQ[sh4["com"] - 6 b/35 eps^2 {qyz, qxz, qxy}] && zeroQ[((T4 - Transpose[T4])/2 /. a -> 1) - hat[6 b/35 {qyz, qxz, qxy}]]],
+   check["traceless", "T_th is traceless at O(eps^2) (no pseudoscalar part)", zeroQ[Tr[T4]]],
+   check["first order", "f_th, f_drag, T_drag at O(eps) are the ellipsoid forms with Q; B = 0 at O(eps)",
+    zeroQ[b1["f_th"] + 2 (4 - 3 a)/5 Qg] && zeroQ[b1["f_drag"] + 2/5 (4 - 24 a/(8 + Pi a)) Qg] && zeroQ[b1["T_drag"] + 4/5 Qg] && zeroQ[b1["B"]]]}]]
+::Text::
+**Spin rates and the stability rule.** To leading order $\mathbf{T}_{\rm drag} \approx c_0\mathbf{I}$ and $G \approx Mg/\gamma_0$. The steady spins are then about the real eigenvectors $\boldsymbol{u}$ of $\tilde{\mathbf{T}} \equiv \mathbf{T}_{\rm th}/(\gamma_0\ell\varepsilon^2)$, with rate
+::BoxMath::
+\Omega = \varepsilon^2\tilde{\lambda}\,\frac{Mg\ell}{c_0} = \varepsilon^2\tilde{\lambda}\,\frac{\rho_pg}{a\alpha} \qquad (\rho_pg/a\alpha \approx 5.4\times10^3\ {\rm s^{-1}}\ \text{at 5 Torr})
+::Text::
+Which spin is stable follows from criterion (41b) of the notes. For a traceless spectrum $\lambda_1 < \lambda_2 < \lambda_3$ it reduces to a compact rule. The stable axis is the *extreme* eigenvector whose eigenvalue has the same sign as the middle one, provided $|\lambda_2|$ exceeds $(\sqrt{3} - 1)/2 \approx 0.366$ of it. So $\boldsymbol{e}_3$ is stable when $0.366 < \lambda_2/\lambda_3 < 1$, and $\boldsymbol{e}_1$ when $0.366 < \lambda_2/\lambda_1 < 1$. Otherwise no spin is stable. For example, a uniaxial $\mathbf{Q}$ gives the spectrum $(-\mu, 0, \mu)$, which never spins stably.
+::Code::
+crit[l_List] := Module[{s = Sort[l]}, Table[Module[{k = i, j, m}, {j, m} = Complement[{1, 2, 3}, {k}];
+     (s[[k]] - s[[j]]) (s[[k]] - s[[m]]) > 0 && s[[j]] (s[[k]] - s[[m]]) + s[[m]] (s[[k]] - s[[j]]) > 0], {i, 3}]];
+rule[l_List] := Module[{s = Sort[l]}, {s[[2]]/s[[1]] > (Sqrt[3] - 1)/2 && s[[2]]/s[[1]] < 1, False, s[[2]]/s[[3]] > (Sqrt[3] - 1)/2 && s[[2]]/s[[3]] < 1}];
+check["stability rule", "for 20000 random traceless spectra, criterion (41b) equals the ratio rule",
+ AllTrue[Table[Module[{l = RandomReal[{-1, 1}, 2]}, AppendTo[l, -Total[l]]; crit[l] == rule[l]], {20000}], TrueQ]]
+::Section::
+6. Step 5: the twisted ellipsoid, which spins but cannot orbit
+::Text::
+Take a triaxial ellipsoid aligned with the $xyz$ harmonic:
+::Code::
+Q0 = DiagonalMatrix[{1, -1/5, -4/5}]; b0 = 3; eps0 = 1/10;
+sD2 = Y2[Q0] + b0 x y z;
+RD2 = toR[sD2, eps0];
+Row[{"s = ", TraditionalForm[sD2], "      eps = ", eps0, ",   convexity margin = ", num[convexityMargin[RD2]], " / l"}]
+::Text::
+The semi-axes are $1 + \varepsilon(1, -\frac{1}{5}, -\frac{4}{5})$, and the $xyz$ bumps carry the chirality. The symmetry group is $D_2$: three two-fold axes and no mirror plane. The diagram's two views show the ellipsoid and, from above, the four-lobed $xyz$ pattern.
+::Code::
+Row[{shapeDiagram[RD2, {0, 0, 0}, PlotLabel -> "twisted ellipsoid (D2)", ImageSize -> 280], shapeDiagram[RD2, {0, 0, 0}, ViewPoint -> {0, 0, 5}, PlotLabel -> "top view", ImageSize -> 280]}]
+::Text::
+At leading order $\tilde{\mathbf{T}} = -\frac{3b}{35}\,{\rm diag}(\frac{3}{5}, -\frac{9}{5}, \frac{6}{5})$, with eigenvalues $(-0.154, 0.463, -0.309)$ along $(x, y, z)$. The middle eigenvalue belongs to $x$ ($-0.154$) and has the sign of the extreme one on $z$ ($-0.309$), with ratio 0.5, so **$z$ is the stable spin axis**. Its spin rate is $\Omega \approx -0.309\,\varepsilon^2\rho_pg/a\alpha = -16.7$ rad/s. Now compare with the exact tensors at $\varepsilon = 0.1$:
+::Code::
+ptD2 = makeParticle[RD2, ell, rhoP, gas];
+smD2 = steadyMotions[ptD2];
+motionGrid[sm_] := Grid[Prepend[{vec[#["u"]], num[#["Omega"]], If[#["R"] === Infinity, "inf", num[10^6 #["R"]]], num[#["period"]], If[#["stable"], Style["stable", Darker[Green]], "unstable"],
+      num[#["growth"], 3], num[#["gradT (K/cm)"]]} & /@ sm, {"spin axis u (body)", "Omega (rad/s)", "R (um)", "period (s)", "stability", "max Re(rate) (1/s)", "|grad T| (K/cm)"}],
+   Frame -> All, Alignment -> Center];
+Module[{st = SelectFirst[smD2, #["stable"] &], lo = -3 b0/35 {3/5, -9/5, 6/5}},
+ Column[{motionGrid[smD2],
+   check["D2 spin", "the stable steady state spins about the z axis (the C2 axis whose eigenvalue shares the middle eigenvalue's sign)",
+    Abs[Abs[st["u"][[3]]] - 1] < 10^-9 && st["Omega"] < 0, "Omega = " <> num[st["Omega"]] <> " rad/s (leading order " <> num[eps0^2 lo[[3]] rhoP $gEarth/gas["alpha"]] <> " rad/s)"],
+   check["D2 no orbit", "spinning about a two-fold axis forces v || u: orbital radius exactly 0", st["R"] < 10^-12 ell]}]]
+::Text::
+**Why $D_2$ cannot orbit.** The stable spin axis is a two-fold axis of the body. A half-turn about it maps the particle onto itself, so the body-frame velocity must be invariant under that half-turn. That forces $\boldsymbol{v} \parallel \boldsymbol{u}$, and at levitation $\boldsymbol{v} = 0$. The particle spins in place. The simulation starts at rest with the $z$ axis tilted 20° from the vertical.
+::Code::
+runD2 = Module[{st = SelectFirst[smD2, #["stable"] &]}, simulate[ptD2, st["G"], qFromTo[RotationMatrix[20 Degree, {1, 1, 0}/Sqrt[2]].st["u"], {0, 0, 1}], {0, 0, 0}, 12.]];
+Module[{ts = Subdivide[0., 12., 1200], sts, st = SelectFirst[smD2, #["stable"] &]},
+ sts = runD2["state"] /@ ts;
+ Column[{
+   Row[{ListLogPlot[Transpose[{ts, VectorAngle[uLab[#], st["u"]]/Degree & /@ sts}], Joined -> True, Frame -> True, FrameLabel -> {"t (s)", "tilt of spin axis from vertical (deg)"},
+      ImageSize -> 300, PlotLabel -> "alignment", PlotRange -> All],
+     ListLinePlot[Transpose[{ts, (quatR[#[[7 ;; 10]]].#[[11 ;; 13]])[[3]] & /@ sts}], Frame -> True, FrameLabel -> {"t (s)", "Omega_Z (rad/s)"}, ImageSize -> 300,
+      PlotLabel -> "spin about the vertical", GridLines -> {None, {st["Omega"]}}],
+     ListLinePlot[10^6 sts[[All, 1 ;; 2]], AspectRatio -> Automatic, Frame -> True, FrameLabel -> {"X (um)", "Y (um)"}, ImageSize -> 260, PlotLabel -> "top view", PlotRange -> All]}],
+   check["D2 simulation", "from a 20 deg tilt the particle aligns, spins up to Omega and stops moving sideways",
+    VectorAngle[uLab[Last[sts]], st["u"]] < 1 Degree && Abs[(quatR[sts[[-1, 7 ;; 10]]].sts[[-1, 11 ;; 13]])[[3]]/st["Omega"] - 1] < 0.01 && Norm[sts[[-1, 4 ;; 5]]] < 10^-2 Norm[Max[Norm[#[[4 ;; 5]]] & /@ sts]],
+    "final tilt " <> num[VectorAngle[uLab[Last[sts]], st["u"]]/Degree] <> " deg, final Omega_Z = " <> num[(quatR[sts[[-1, 7 ;; 10]]].sts[[-1, 11 ;; 13]])[[3]]] <> " rad/s, net horizontal displacement " <>
+     num[10^6 Norm[sts[[-1, 1 ;; 2]]]] <> " um"]}]]
+::Text::
+The alignment is slow, at a rate of order $\Omega^2I/c_0$. While the axis precesses in, the tilted body glides, and the particle wanders several hundred micrometres sideways in a looping path. Once aligned it spins in place. The spin sense is fixed by the handedness of the body: flipping $b$ (the mirror-image particle) reverses $\Omega$.
+::Section::
+7. Step 6: tilt the ellipsoid against the twist, and it orbits
+::Text::
+Tilt the ellipsoid by an angle $\chi$ about the $x$ axis while keeping the $xyz$ harmonic fixed. The $x$ axis is the only two-fold axis left (symmetry $C_2$), and $x$ is not the spin axis. The stable spin stays close to $z$, which is no longer a symmetry axis, so the body-frame velocity can have a horizontal part that rotates with the body: a circular orbit.
+::Code::
+Qc[chi_] := RotationMatrix[chi, {1, 0, 0}].Q0.Transpose[RotationMatrix[chi, {1, 0, 0}]];
+chi0 = 20 Degree;
+sOrb = Expand[Y2[Qc[chi0]] + b0 x y z];
+Rorb = toR[sOrb, eps0];
+Column[{Row[{"s = ", TraditionalForm[N[sOrb, 4]], "      (chi = 20 deg, b = 3, eps = 0.1)"}], Row[{"Q(chi) = ", tf[N[Qc[chi0], 4]]}],
+  check["convex", "the orbiting shape is convex", convexityMargin[Rorb] > 0, "smallest principal curvature " <> num[convexityMargin[Rorb]] <> " / l"]}]
+::Code::
+Row[{shapeDiagram[Rorb, {0, 0, 0}, PlotLabel -> "tilted twisted ellipsoid (C2)", ImageSize -> 280], shapeDiagram[Rorb, {0, 0, 0}, ViewPoint -> {5, 0, 0}, PlotLabel -> "view down x (the C2 axis)", ImageSize -> 280]}]
+::Subsection::
+7.1 The four tensors
+::Text::
+The formulas of Step 4 with $\mathbf{Q} = \mathbf{Q}(\chi)$ give the tensors to leading order ($a = 1$). $\mathbf{f}_{\rm th}$, $\mathbf{f}_{\rm drag}$ and $\mathbf{T}_{\rm drag}$ come from $\mathbf{Q}(20°)$ at first order. $\mathbf{T}_{\rm th}$ is second order, with a symmetric (spin) part and an antisymmetric (CoM-offset) part:
+::Code::
+T2[Q_, bb_] := -(9 bb/105) DiagonalMatrix[{Q[[2, 2]] - Q[[3, 3]], Q[[3, 3]] - Q[[1, 1]], Q[[1, 1]] - Q[[2, 2]]}] + (6 bb/35) hat[{Q[[2, 3]], Q[[1, 3]], Q[[1, 2]]}];
+Qn = N[Qc[chi0]];
+loT = <|"f_th/gamma0" -> IdentityMatrix[3] - 2/5 eps0 Qn, "f_drag/xi0" -> IdentityMatrix[3] - 2/5 (4 - 24/(8 + Pi)) eps0 Qn, "T_th/(gamma0 l)" -> eps0^2 T2[Qn, b0],
+   "T_drag/c0" -> IdentityMatrix[3] - 4/5 eps0 Qn|>;
+ptOrb = makeParticle[Rorb, ell, rhoP, gas];
+exT = <|"f_th/gamma0" -> ptOrb["blocks"]["f_th"]/ptOrb["gamma0"], "f_drag/xi0" -> ptOrb["blocks"]["f_drag"]/ptOrb["xi0"], "T_th/(gamma0 l)" -> ptOrb["blocks"]["T_th"]/(ptOrb["gamma0"] ell),
+   "T_drag/c0" -> ptOrb["blocks"]["T_drag"]/ptOrb["c0"]|>;
+Grid[Prepend[Table[{k, tf[Round[loT[k], 10.^-4]], tf[Round[exT[k], 10.^-4]]}, {k, Keys[loT]}], {"tensor", "leading order (formulas)", "exact quadrature, eps = 0.1"}], Frame -> All, Alignment -> Center]
+::Text::
+The exact tensors differ from the leading-order ones by relative $O(\varepsilon)$, mostly through the size change of the body. The check below repeats the comparison at $\varepsilon = 0.01$, where the chiral torque divided by $\varepsilon^2$ must match the formula to $O(\varepsilon)$.
+::Code::
+Module[{p = makeParticle[toR[sOrb, 0.01], ell, rhoP, gas], Tn},
+ Tn = p["blocks"]["T_th"]/(p["gamma0"] ell 0.01^2);
+ check["T_th (tilted)", "quadrature T_th/eps^2 at eps = 0.01 matches the second-order formula", Norm[Tn - T2[Qn, b0]]/Norm[T2[Qn, b0]] < 0.03,
+  "relative difference " <> num[Norm[Tn - T2[Qn, b0]]/Norm[T2[Qn, b0]], 3]]]
+::Subsection::
+7.2 Predicted orbit: leading order and exact
+::Text::
+**Leading order.** Take the real eigenpair $(\tilde{\lambda}, \boldsymbol{u})$ of $\tilde{\mathbf{T}}$. Levitation sets $G\gamma_0 \approx Mg$. The spin is $\Omega = \varepsilon^2\tilde{\lambda}Mg\ell/c_0$. The horizontal body-frame velocity (notes Eq. 43) is $\boldsymbol{v}_\perp = (Mg/\xi_0)[(\mathbf{f}_{\rm th}/\gamma_0 - \mathbf{I})\boldsymbol{u}]_\perp = -\frac{2(4 - 3a)}{5}\varepsilon(Mg/\xi_0)(\mathbf{Q}\boldsymbol{u})_\perp$. It rotates with the body, so the CoM moves on a circle of radius $|\boldsymbol{v}_\perp|/|\Omega|$:
+::BoxMath::
+R_{\rm orbit} = \frac{a}{a + \beta}\,\frac{2(4 - 3a)}{5}\,\frac{|(\mathbf{Q}\boldsymbol{u})_\perp|}{\varepsilon\,|\tilde{\lambda}|}\;\ell , \qquad T_{\rm orbit} = \frac{2\pi}{|\Omega|} = \frac{2\pi}{\varepsilon^2|\tilde{\lambda}|}\,\frac{a\alpha}{\rho_pg} , \qquad \beta = 2 - a + \frac{\pi a}{4}
+::Text::
+At this order the radius is purely geometric: it is independent of the gas pressure, the particle density and the temperature. The period scales with pressure and inversely with density. An orbit needs **both** $\tilde{\lambda} \ne 0$ (surface chirality) **and** $(\mathbf{Q}\boldsymbol{u})_\perp \ne 0$ (the spin axis must not be a principal axis of the ellipsoid part). The twisted ellipsoid of Step 5 fails the second condition.
+::Code::
+loOrbit[Q_, bb_, e_] := Module[{ev, vecs, Mgl = rhoP $gEarth/(gas["a"] gas["alpha"])}, {ev, vecs} = Eigensystem[T2[N[Q], bb]];
+   Table[If[Abs[Im[ev[[k]]]] > 10^-9, Nothing, Module[{u = Normalize[Re[vecs[[k]]]], lam = Re[ev[[k]]], qu},
+      qu = N[Q].u; <|"u" -> u, "lambda" -> lam, "Omega" -> e^2 lam Mgl, "R" -> ell 4/(8 + Pi) 2/5 Norm[qu - (qu.u) u]/(e Abs[lam]), "period" -> 2 Pi/Abs[e^2 lam Mgl]|>]], {k, 3}]];
+smOrb = steadyMotions[ptOrb];
+stOrb = SelectFirst[smOrb, #["stable"] &];
+loOrb = First@MaximalBy[loOrbit[Qc[chi0], b0, eps0], Abs[#["u"].stOrb["u"]] &];
+Column[{Style["exact steady states (full 6x9 response, eps = 0.1):", Bold], motionGrid[smOrb],
+  Row[{Style["leading order for the same axis: ", Bold], "u = ", vec[Sign[loOrb["u"].stOrb["u"]] loOrb["u"]], ",  lambda = ", num[loOrb["lambda"]], ",  Omega = ", num[loOrb["Omega"]],
+    " rad/s,  R = ", num[10^6 loOrb["R"]], " um,  period = ", num[loOrb["period"]], " s"}],
+  check["orbit exists", "exactly one stable steady state pair: spin near z with a finite orbit radius", stOrb =!= Missing["NotFound"] && 10^-7 < stOrb["R"] < 10^-3 && Abs[stOrb["u"][[3]]] > 0.95,
+   "u = " <> vec[stOrb["u"]] <> ", R = " <> num[10^6 stOrb["R"]] <> " um, period " <> num[stOrb["period"]] <> " s"],
+  check["leading order", "the leading-order formulas agree with the exact steady state to O(eps) (within 25%)",
+   Abs[loOrb["R"]/stOrb["R"] - 1] < 0.25 && Abs[loOrb["Omega"]/stOrb["Omega"] - 1] < 0.25,
+   "R: " <> num[10^6 loOrb["R"]] <> " vs " <> num[10^6 stOrb["R"]] <> " um; Omega: " <> num[loOrb["Omega"]] <> " vs " <> num[stOrb["Omega"]] <> " rad/s"]}]
+::Text::
+**Convergence.** As $\varepsilon \to 0$ the exact solution must approach the leading-order one. $R\varepsilon$ and $\Omega/\varepsilon^2$ should become constant, with relative errors shrinking like $\varepsilon$:
+::Code::
+convTab = Table[Module[{p = makeParticle[toR[sOrb, e], ell, rhoP, gas], sm, st, lo},
+    sm = steadyMotions[p]; lo = First@MaximalBy[loOrbit[Qc[chi0], b0, e], Abs[#["u"].stOrb["u"]] &];
+    st = First@MaximalBy[sm, Abs[#["u"].lo["u"]] &];
+    {e, 10^6 st["R"] e, st["Omega"]/e^2, 10^6 lo["R"] e, lo["Omega"]/e^2, st["stable"]}], {e, {0.1, 0.05, 0.025, 0.0125}}];
+Column[{Grid[Prepend[{#[[1]], num[#[[2]]], num[#[[3]]], num[#[[4]]], num[#[[5]]], num[Abs[#[[2]]/#[[4]] - 1], 2], num[Abs[#[[3]]/#[[5]] - 1], 2], #[[6]]} & /@ convTab,
+    {"eps", "R eps (um), exact", "Omega/eps^2, exact", "R eps, leading", "Omega/eps^2, leading", "rel. err R", "rel. err Omega", "stable"}], Frame -> All],
+  check["convergence", "relative errors of R and Omega fall roughly in proportion to eps",
+   Module[{er = Abs[#[[2]]/#[[4]] - 1] & /@ convTab, eo = Abs[#[[3]]/#[[5]] - 1] & /@ convTab}, er[[-1]] < er[[1]]/4 && eo[[-1]] < eo[[1]]/4]]}]
+::Subsection::
+7.3 Simulated trajectory
+::Text::
+The particle starts at rest with its spin axis tilted 15° from the vertical, at the steady state's levitation gradient, and the full nonlinear equations run for 20 s. The spin builds up within milliseconds. The axis then precesses and slowly aligns (a rate of about $0.33\ {\rm s^{-1}}$), and the CoM spirals onto the predicted circle.
+::Code::
+runOrb = simulate[ptOrb, stOrb["G"], qFromTo[RotationMatrix[15 Degree, {1, 1, 0}/Sqrt[2]].stOrb["u"], {0, 0, 1}], {0, 0, 0}, 20.];
+orbMeas = orbitFromRun[runOrb, 15., 20.];
+Module[{ts = Subdivide[0., 20., 4000], sts, ctr = orbMeas["centre"]},
+ sts = runOrb["state"] /@ ts;
+ Column[{
+   Row[{ListLinePlot[10^6 sts[[All, 1 ;; 2]], AspectRatio -> Automatic, Frame -> True, FrameLabel -> {"X (um)", "Y (um)"}, PlotLabel -> "top view of the CoM, 0-20 s",
+      Epilog -> {Red, Dashed, Circle[10^6 ctr, 10^6 stOrb["R"]]}, ImageSize -> 330, PlotRange -> All],
+     Column[{ListLinePlot[Transpose[{ts, 10^6 (Norm[#[[1 ;; 2]] - ctr] & /@ sts)}], Frame -> True, FrameLabel -> {"t (s)", "distance from orbit centre (um)"}, ImageSize -> 300,
+        GridLines -> {None, {10^6 stOrb["R"]}}, PlotRange -> All],
+       ListLinePlot[Transpose[{ts, VectorAngle[uLab[#], stOrb["u"]]/Degree & /@ sts}], Frame -> True, FrameLabel -> {"t (s)", "spin-axis tilt from steady (deg)"}, ImageSize -> 300,
+        PlotRange -> All]}]}],
+   ListLinePlot[10^6 (runOrb["state"][#][[1 ;; 2]] & /@ Subdivide[17., 20., 1500]), AspectRatio -> Automatic, Frame -> True, FrameLabel -> {"X (um)", "Y (um)"},
+    PlotLabel -> "final orbit, 17-20 s (red dashed: steady-state prediction)", Epilog -> {Red, Dashed, Circle[10^6 ctr, 10^6 stOrb["R"]], PointSize[Medium], Point[10^6 ctr]}, ImageSize -> 330, Axes -> False,
+    PlotRange -> Transpose[{10^6 ctr - 1.3 10^6 stOrb["R"], 10^6 ctr + 1.3 10^6 stOrb["R"]}]],
+   check["simulated orbit", "the simulated CoM circles with the steady-state radius, period and sense",
+    Abs[orbMeas["R"]/stOrb["R"] - 1] < 0.03 && Abs[orbMeas["period"]/stOrb["period"] - 1] < 0.01 && Sign[orbMeas["Omega"]] == Sign[stOrb["Omega"]],
+    "measured over 15-20 s: R = " <> num[10^6 orbMeas["R"]] <> " um, period " <> num[orbMeas["period"]] <> " s, " <> orbMeas["sense"] <> "; vertical drift " <> sci[orbMeas["vertical drift (m/s)"]] <> " m/s"]}]]
+::Text::
+The animation shows the last second at true scale: the body (radius 20 µm), its spin axis (blue), and the CoM path. The particle is about as large as its orbit, so the motion looks like a wobbling spin whose centre traces a circle.
+::Code::
+With[{mesh = bodyMesh[Rorb, 24], states = Table[runOrb["state"][t], {t, 19., 20., 0.01}], ctr = 10^6 orbMeas["centre"], rr = 10^6 stOrb["R"], zc = 10^6 runOrb["state"][19.5][[3]]},
+ Manipulate[Module[{st = states[[k]], x, R},
+   x = 10^6 st[[1 ;; 3]]; R = quatR[st[[7 ;; 10]]];
+   Graphics3D[{drawBody[mesh, x, R, 20], {Blue, Thick, Line[{x, x + 35 R.stOrb["u"]}]}, {Red, Thick, Line[Table[Append[ctr + rr {Cos[p], Sin[p]}, zc], {p, 0, 2 Pi, Pi/40}]]},
+     If[k > 1, {Black, Thick, Line[10^6 states[[1 ;; k, 1 ;; 3]]]}, Nothing]},
+    PlotRange -> {{ctr[[1]] - 60, ctr[[1]] + 60}, {ctr[[2]] - 60, ctr[[2]] + 60}, {zc - 45, zc + 45}}, BoxRatios -> Automatic, Lighting -> "Neutral", Axes -> True,
+    AxesLabel -> {"X (um)", "Y (um)", "Z"}, ViewPoint -> {1.3, -2.4, 1.6}, PlotLabel -> Row[{"t = ", NumberForm[19 + 0.01 (k - 1), {4, 2}], " s   (red: predicted orbit)"}], ImageSize -> 460]],
+  {{k, 1, "frame (10 ms)"}, 1, 101, 1, ControlType -> Animator, AnimationRunning -> False}, SaveDefinitions -> True]]
+::Subsection::
+7.4 Orbital radius and period
+::BoxMath::
+\text{Step-6 particle } (\varepsilon = 0.1,\ \chi = 20°,\ b = 3,\ \ell = 20\,\mu{\rm m},\ \rho_p = 1\,{\rm g/cm^3},\ 5\ {\rm Torr},\ 300\ {\rm K}):\quad R_{\rm orbit} = 24.5\,\mu{\rm m} ,\quad T_{\rm orbit} = 0.436\ {\rm s}\ (\Omega = -14.4\ {\rm rad/s,\ clockwise\ from\ above}) ,\quad |\nabla T| = 67.3\ {\rm K/cm}
+::Code::
+Grid[{{"", "orbital radius (um)", "period (s)", "Omega (rad/s)"},
+  {"leading-order formula", num[10^6 loOrb["R"]], num[loOrb["period"]], num[loOrb["Omega"]]},
+  {"exact steady state", num[10^6 stOrb["R"]], num[stOrb["period"]], num[stOrb["Omega"]]},
+  {"simulation (15-20 s)", num[10^6 orbMeas["R"]], num[orbMeas["period"]], num[orbMeas["Omega"]]}}, Frame -> All, Alignment -> Center, Background -> {None, {LightGray}}]
+::Text::
+**Dependence on the tilt, the pressure and the handedness.** The next cell varies $\chi$ at fixed $\varepsilon = 0.1$. The radius grows roughly linearly with the tilt, since $(\mathbf{Q}\boldsymbol{u})_\perp \propto \sin2\chi$, until the spin loses stability near $\chi \approx 30°$–$45°$. Varying the pressure changes the period in proportion. The radius changes by only a few per cent, through the inertial corrections $M\Omega/\xi_0$ and $I\Omega/c_0$, which grow at low pressure. The mirror-image particle ($b \to -b$ together with $\chi \to -\chi$) orbits with the same radius in the opposite sense.
+::Code::
+chiScan = Table[Module[{p = makeParticle[toR[Expand[Y2[Qc[c Degree]] + b0 x y z], eps0], ell, rhoP, gas, 1 &, 32, 64], st},
+    st = SelectFirst[steadyMotions[p], #["stable"] && Abs[#["u"][[3]]] > 0.8 &]; If[MissingQ[st], {c, Missing[], Missing[]}, {c, 10^6 st["R"], st["period"]}]], {c, 0, 40, 5}];
+presScan = Table[Module[{g = gasModel[<|"PTorr" -> P|>], p, st},
+    p = makeParticle[Rorb, ell, rhoP, g, 1 &, 32, 64]; st = SelectFirst[steadyMotions[p], #["stable"] &]; {P, 10^6 st["R"], st["period"]}], {P, {2., 5., 10.}}];
+mirror = Module[{p = makeParticle[toR[Expand[Y2[Qc[-chi0]] - b0 x y z], eps0], ell, rhoP, gas]}, SelectFirst[steadyMotions[p], #["stable"] &]];
+Column[{
+  Row[{ListLinePlot[DeleteMissing[chiScan[[All, {1, 2}]], 1, 1], Frame -> True, FrameLabel -> {"tilt chi (deg)", "orbital radius (um)"}, Mesh -> All, ImageSize -> 300, PlotLabel -> "stable orbits, eps = 0.1"],
+    ListLinePlot[DeleteMissing[chiScan[[All, {1, 3}]], 1, 1], Frame -> True, FrameLabel -> {"tilt chi (deg)", "period (s)"}, Mesh -> All, ImageSize -> 300, PlotRange -> {0, All}]}],
+  Grid[Prepend[{#[[1]], num[#[[2]]], num[#[[3]]]} & /@ presScan, {"pressure (Torr)", "R (um)", "period (s)"}], Frame -> All],
+  check["pressure", "from 2 to 10 Torr the period grows in proportion to the pressure, while the radius changes by only a few per cent",
+   Abs[presScan[[1, 2]]/presScan[[3, 2]] - 1] < 0.1 && Abs[(presScan[[3, 3]]/presScan[[1, 3]])/(10/2) - 1] < 0.05,
+   "R changes by " <> num[100 Abs[presScan[[1, 2]]/presScan[[3, 2]] - 1], 2] <> "% (inertial corrections M Omega/xi0 and I Omega/c0, which grow as 1/P); period ratio " <> num[presScan[[3, 3]]/presScan[[1, 3]], 3] <> " for a pressure ratio of 5"],
+  check["mirror image", "the mirror-image particle orbits with the same radius and period in the opposite sense",
+   Abs[mirror["R"]/stOrb["R"] - 1] < 10^-6 && Abs[mirror["Omega"]/stOrb["Omega"] + 1] < 10^-6, "Omega = " <> num[mirror["Omega"]] <> " rad/s"]}]
+::Section::
+8. Interactive explorer
+::Text::
+Tick **compute**, then choose the deformation $\varepsilon$, the tilt $\chi$, the twist $b$, and the particle and gas parameters. The explorer recomputes the tensors by quadrature (on a coarser 32 × 64 grid), finds every steady state, and runs the full equations from rest with the vertical tilted 10° off the stable axis (or off $z$ if none is stable). Each update takes a second or two.
+::Code::
+Manipulate[
+ If[! go, Style["Set the parameters, then tick \"compute\" (each update takes a second or two).", 13, Italic], Module[{g = gasModel[<|"PTorr" -> pT|>], p, sm, st, run, ts, sts, u0},
+  p = makeParticle[toR[Expand[Y2[Qc[chi Degree]] + bb x y z], e], rad 10^-6, rhoc 1000., g, 1 &, 32, 64];
+  sm = steadyMotions[p]; st = SelectFirst[sm, #["stable"] &];
+  u0 = If[MissingQ[st], {0, 0, 1.}, st["u"]];
+  run = simulate[p, If[MissingQ[st], p["G0"], st["G"]], qFromTo[RotationMatrix[10 Degree, {1, 1, 0}/Sqrt[2]].u0, {0, 0, 1}], {0, 0, 0}, tEnd];
+  ts = Subdivide[0., tEnd, 1500]; sts = run["state"] /@ ts;
+  Column[{
+    Row[{ListLinePlot[10^6 sts[[All, 1 ;; 2]], AspectRatio -> Automatic, Frame -> True, FrameLabel -> {"X (um)", "Y (um)"}, ImageSize -> 300, PlotLabel -> "top view of the CoM", PlotRange -> All,
+       Epilog -> If[MissingQ[st] || st["R"] === Infinity, {}, {Red, Dashed, Circle[Mean[10^6 sts[[-300 ;;, 1 ;; 2]]], 10^6 st["R"]]}]],
+      ListLinePlot[Transpose[{ts, (quatR[#[[7 ;; 10]]].#[[11 ;; 13]])[[3]] & /@ sts}], Frame -> True, FrameLabel -> {"t (s)", "Omega_Z (rad/s)"}, ImageSize -> 280, PlotRange -> All]}],
+    motionGrid[sm],
+    Row[{"convexity margin: ", num[convexityMargin[toR[Expand[Y2[Qc[chi Degree]] + bb x y z], e], 20]], " / l  (must be > 0 for the free-molecule model to apply)"}]}]]],
+ {{go, False, "compute"}, {True, False}}, Delimiter, {{e, 0.1, "deformation eps"}, 0.02, 0.15}, {{chi, 20., "ellipsoid tilt chi (deg)"}, -45., 45.}, {{bb, 3., "twist b (xyz)"}, -4., 4.},
+ Delimiter, {{rad, 20., "radius (um)"}, 5., 60.}, {{rhoc, 1., "density (g/cm^3)"}, 0.2, 2.5}, {{pT, 5., "pressure (Torr)"}, 0.5, 20.},
+ {{tEnd, 8., "duration (s)"}, 1., 30.},
+ ContinuousAction -> False, SynchronousUpdating -> False, SaveDefinitions -> True, ControlPlacement -> Left]
+::Section::
+9. Summary
+::Code::
+Column[{Row[{"checks: ", Length[$verifications], "  (", Count[$verifications[[All, 3]], "VERIFIED"], " verified)"}],
+  Grid[Prepend[$verifications[[All, 1 ;; 3]], Style[#, Bold] & /@ {"item", "statement", "result"}], Frame -> All, Alignment -> Left, Background -> {None, {LightGray}}]}]
+::Item::
+- **Where chirality enters.** For a uniform-density near-sphere the thermophoretic torque about the CoM is $O(\varepsilon^2)$. It comes only from products of harmonics of adjacent degree. The simplest is $l = 2 \times l = 3$, and it is traceless at this order. Single harmonics give nothing ($l = 1$, $l = 2$) or almost nothing ($l = 3$: symmetric part $O(\varepsilon^5)$).
+- **Simplest spinning shape.** `R = 1 + eps (n.Q0.n + b x y z)`, an ellipsoid with an $xyz$ twist ($D_2$). It spins steadily about the principal axis selected by the ratio rule, with $\Omega = \varepsilon^2\tilde{\lambda}\rho_pg/a\alpha$. For the defaults this is about $-14$ rad/s. By symmetry it spins in place, with orbit radius 0.
+- **Simplest orbiting shape.** Tilt the ellipsoid against the twist, `R = 1 + eps (n.Q(chi).n + b x y z)` ($C_2$). With $\varepsilon = 0.1$, $\chi = 20°$ and $b = 3$, the orbit has **R = 24.5 µm and T = 0.436 s**, clockwise seen from above. The mirror image turns the other way. To leading order $R = \frac{a}{a + \beta}\frac{2(4 - 3a)}{5}\frac{|(\mathbf{Q}\boldsymbol{u})_\perp|}{\varepsilon|\tilde{\lambda}|}\ell$, independent of pressure, and $T = 2\pi a\alpha/(\varepsilon^2|\tilde{\lambda}|\rho_pg) \propto P$.
+- **Ingredients of an orbit.** (i) Surface chirality, which gives a symmetric $\mathbf{T}_{\rm th}$ and a steady spin. (ii) A stable spin axis, by the ratio rule of Section 5. (iii) A spin axis that is not a principal axis of the thermophoretic force tensor, $(\mathbf{Q}\boldsymbol{u})_\perp \ne 0$, which gives a lateral velocity that turns with the body. A mass offset (Shape 2) supplies none of these.

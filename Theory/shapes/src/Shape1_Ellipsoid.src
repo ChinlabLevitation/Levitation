@@ -1,0 +1,178 @@
+::Title::
+Shape 1: a near-spherical ellipsoid
+::Subtitle::
+Response tensors, steady states and trajectories of a triaxial ellipsoid close to a sphere, in a uniform temperature gradient without a trap
+::Text::
+This is the first notebook in a series asking which simple particle shape has the chirality needed for circular orbits. The physics follows the corrected notes (v22). The gas–surface stress of Eq. (50) is integrated over the particle surface. This gives the complete linear response about the centre of mass (CoM), $(\boldsymbol{F}, \boldsymbol{\tau}) = -\mathcal{R}\cdot(\nabla\ln T, \boldsymbol{v}, \boldsymbol{\omega})$, with blocks $\mathbf{f}_{\rm th}$, $\mathbf{f}_{\rm drag}$, $\mathbf{B}$, $\mathbf{T}_{\rm th}$, $\mathbf{B}^{\top}$ and $\mathbf{T}_{\rm drag}$. The temperature field is a uniform gradient $\nabla\ln T = -G\hat{Z}$ (hot below), with no trap. The shared machinery lives in `ShapeLevitation.wl` next to this notebook.
+::Note::
+**Results in brief.** (1) The ellipsoid is centrosymmetric, so $\mathbf{T}_{\rm th} = 0$ and $\mathbf{B} = 0$ exactly, to all orders in the deformation. (2) To first order in $\varepsilon$, $\mathbf{f}_{\rm th}$, $\mathbf{f}_{\rm drag}$ and $\mathbf{T}_{\rm drag}$ are diagonal in the principal axes, with the closed forms of Section 4. (3) Nothing ever torques the particle, so every orientation is an equilibrium (neutral). (4) At levitation a tilted ellipsoid **glides in a straight line** at speed $\approx\frac{1}{5}(4 - 3a)\varepsilon|e_1 - e_3|\sin2\theta\,Mg/\xi_0$, up to 1.5 mm/s for the defaults. (5) There is no spin and **no orbit**: the orbital radius is infinite and there is no period.
+::Section::
+1. Setup
+::Code::
+ClearAll["Global`*"];
+shapesDir = Quiet@Check[NotebookDirectory[], $Failed]; If[! StringQ[shapesDir], shapesDir = Environment["SHAPES_DIR"]];
+Get[FileNameJoin[{shapesDir, "ShapeLevitation.wl"}]];
+$verifications = {};
+record[ref_, claim_, status_, detail_] := (AppendTo[$verifications, {ref, claim, status, detail}]; VR[ref, claim, status, detail]);
+VR /: MakeBoxes[VR[ref_, claim_, status_, detail_], fmt_] := ToBoxes[Panel[Column[{Row[{Style[status, Bold, If[status == "VERIFIED", Darker[Green], Red]], "   ", Style[ref, Bold], ":  ", claim}], If[detail === "", Nothing, detail]}]], fmt];
+check[ref_String, claim_String, test_, detail_ : ""] := record[ref, claim, If[TrueQ[test], "VERIFIED", "DISCREPANCY"], detail];
+zeroQ[expr_] := AllTrue[Flatten[{Simplify[expr]}], PossibleZeroQ];
+sci[x_] := If[x == 0, "0", Module[{e = Floor[Log10[Abs[N[x]]]]}, ToString[NumberForm[N[x]/10^e, {3, 2}]] <> "e" <> ToString[e]]];
+num[x_, d_ : 4] := If[x != 0 && (Abs[x] < 10^-3 || Abs[x] >= 10^5), sci[x], ToString[NumberForm[N[x], d]]];
+tf[m_] := TraditionalForm[MatrixForm[m]];
+dispT[m_] := If[DiagonalMatrixQ[m] && ! zeroQ[m], Column[Append[Table[Row[{"(", i, ",", i, ")   ", TraditionalForm[m[[i, i]]]}], {i, 3}], "(off-diagonal entries = 0)"]], tf[m]];
+n = {x, y, z};
+gas = gasModel[]; ell = 20*^-6; rhoP = 1000.;
+::Section::
+2. The shape
+::Text::
+Lengths are in units of the mean radius $\ell$. The body is the ellipsoid with semi-axes $a_i = 1 + \varepsilon e_i$ along the body axes $x, y, z$. Its surface is $\boldsymbol{r} = \ell R(\hat{n})\hat{n}$, where $\hat{n} = (x, y, z)$ is the unit direction. The Mathematica definition used throughout is:
+::Code::
+a1 = 1 + eps e1; a2 = 1 + eps e2; a3 = 1 + eps e3;
+Rellipsoid[{x_, y_, z_}] := 1/Sqrt[x^2/a1^2 + y^2/a2^2 + z^2/a3^2];
+defaults = {eps -> 1/10, e1 -> 1, e2 -> 0, e3 -> -1};
+Rnum[nn_List] := Rellipsoid[nn] /. defaults;
+Row[{"R(n) = ", TraditionalForm[Rellipsoid[n]], "      defaults: ", defaults, "   (semi-axes 1.1, 1.0, 0.9)"}]
+::Text::
+The defaults give a triaxial body, 10% longer along $x$ and 10% shorter along $z$. The symbolic engine needs a radius that equals 1 identically at $\varepsilon = 0$. On the unit sphere, $x^2 + y^2 + z^2 = 1$, the same surface is $R = [1 + \sum_i(a_i^{-2} - 1)n_i^2]^{-1/2}$. The first check confirms the two forms agree. The free-molecule stress model assumes a convex body (no element shadows another), which the second check confirms. The last check tests the numerical quadrature against the exact mass and inertia of an ellipsoid.
+::Code::
+Rsph = 1/Sqrt[1 + (a1^-2 - 1) x^2 + (a2^-2 - 1) y^2 + (a3^-2 - 1) z^2];
+pt = makeParticle[Rnum, ell, rhoP, gas];
+Module[{Mex, Iex, A = N[{a1, a2, a3} /. defaults]},
+ Mex = 4 Pi/3 rhoP ell^3 Times @@ A; Iex = Mex ell^2/5 DiagonalMatrix[{A[[2]]^2 + A[[3]]^2, A[[1]]^2 + A[[3]]^2, A[[1]]^2 + A[[2]]^2}];
+ Column[{
+   check["surface", "the regular form equals the ellipsoid on the unit sphere", zeroQ[(Rsph - Rellipsoid[n]) /. z -> Sqrt[1 - x^2 - y^2]]],
+   check["convex", "the default body is convex (smallest principal curvature > 0)", convexityMargin[Rnum] > 0, "smallest principal curvature = " <> num[convexityMargin[Rnum]] <> " / ell"],
+   check["quadrature", "numerical mass, CoM and inertia match the exact ellipsoid", Abs[pt["M"]/Mex - 1] < 10^-8 && Norm[pt["com"]] < 10^-12 ell && Norm[pt["I"] - Iex]/Norm[Iex] < 10^-8,
+    "M = " <> num[pt["M"]] <> " kg,  I/(M ell^2) = " <> ToString[Round[Diagonal[pt["I"]]/(pt["M"] ell^2), 10.^-4]]]}]]
+::Section::
+3. Diagram
+::Text::
+The diagram shows the default body, coloured by $R - 1$ (red is long, blue is short), with its body axes. The black dot is the geometric centre, which here is also the CoM and the centre of force. The symmetry group is $D_{2h}$: three mirror planes, three two-fold axes, and inversion through the centre.
+::Code::
+Row[{shapeDiagram[Rnum, {0, 0, 0}, PlotLabel -> "ellipsoid, semi-axes (1.1, 1.0, 0.9) ell"],
+  shapeDiagram[Rnum, {0, 0, 0}, ViewPoint -> {0, 0, 5}, PlotLabel -> "top view (down z)"]}]
+::Section::
+4. The four tensors
+::Text::
+The symbolic engine expands the surface normal, the area element and every stress kernel in $\varepsilon$. It then integrates the resulting polynomials in $\hat{n}$ exactly with the sphere moments $\oint x^ay^bz^c\,d\Omega$. Results are in natural units: $\mathbf{f}_{\rm th}$ in $\gamma_0$, $\mathbf{f}_{\rm drag}$ in $\xi_0$, $\mathbf{T}_{\rm th}$ in $\gamma_0\ell$, $\mathbf{T}_{\rm drag}$ in $c_0$, and $\mathbf{B}$ in $\xi_0\ell$, where $\gamma_0$, $\xi_0$ and $c_0$ are the sphere values of the notes. The accommodation coefficient $a$ is kept general.
+::Code::
+shE = symbolicShape[Rsph, n, eps, 1, 1, "Accommodation" -> a];
+bl = Map[FullSimplify, shE["blocks"], {3}];
+Grid[{{"f_th / gamma0 :", dispT[bl["f_th"]]}, {"f_drag / xi0 :", dispT[bl["f_drag"]]}, {"T_th / (gamma0 l) :", dispT[bl["T_th"]]},
+  {"T_drag / c0 :", dispT[bl["T_drag"]]}, {"B / (xi0 l) :", dispT[bl["B"]]}}, Alignment -> {Left, Center}, Spacings -> {1, 1.5}, Frame -> All]
+::Text::
+With $E \equiv e_1 + e_2 + e_3$ and $i$ labelling the principal axis, the four tensors to first order in $\varepsilon$ are:
+::BoxMath::
+\mathbf{f}_{\rm th} = \gamma_0\,{\rm diag}\Big[1 + \tfrac{2\varepsilon}{5}\big((3 - a)E - (4 - 3a)e_i\big)\Big]
+::BoxMath::
+\mathbf{f}_{\rm drag} = \xi_0\,{\rm diag}\Big[1 + \tfrac{2\varepsilon}{5}\Big(3E - 4e_i + \frac{8a(3e_i - E)}{8 + \pi a}\Big)\Big]
+::BoxMath::
+\mathbf{T}_{\rm th} = 0 \qquad\text{(exactly, to all orders)}
+::BoxMath::
+\mathbf{T}_{\rm drag} = c_0\,{\rm diag}\Big[1 + \tfrac{4\varepsilon}{5}(2E - e_i)\Big] , \qquad \mathbf{B} = \mathbf{B}^{\top} = 0
+::Text::
+The isotropic parts are just the size change: an ellipsoid with all $e_i = e$ is a sphere of radius $1 + \varepsilon e$, so $\gamma_0, \xi_0 \propto \ell^2$ gain $2\varepsilon e$ and $c_0 \propto \ell^4$ gains $4\varepsilon e$. The anisotropic parts are what matter for the motion. For full accommodation ($a = 1$), $\mathbf{f}_{\rm th}$ is *smaller* along a long axis, by $\frac{2}{5}\varepsilon e_i\gamma_0$. The thermophoretic anisotropy is proportional to $4 - 3a$, which is $5\sqrt{\pi}/\sqrt{h}$ times $C_n - C_t$ (the normal minus the tangential heat-flux coefficient of Eq. 50). $\mathbf{T}_{\rm drag}/c_0$ does not depend on $a$.
+::Code::
+Column[{
+  check["f_th", "f_th = gamma0 diag[1 + (2 eps/5)((3 - a) E - (4 - 3 a) e_i)]", zeroQ[bl["f_th"] - DiagonalMatrix[Table[1 + 2 eps/5 ((3 - a) (e1 + e2 + e3) - (4 - 3 a) {e1, e2, e3}[[i]]), {i, 3}]]]],
+  check["f_drag", "f_drag = xi0 diag[1 + (2 eps/5)(3E - 4 e_i + 8a(3 e_i - E)/(8 + pi a))]",
+   zeroQ[bl["f_drag"] - DiagonalMatrix[Table[1 + 2 eps/5 (3 (e1 + e2 + e3) - 4 {e1, e2, e3}[[i]] + 8 a (3 {e1, e2, e3}[[i]] - (e1 + e2 + e3))/(8 + Pi a)), {i, 3}]]]],
+  check["T_drag", "T_drag = c0 diag[1 + (4 eps/5)(2E - e_i)], independent of a", zeroQ[bl["T_drag"] - DiagonalMatrix[Table[1 + 4 eps/5 (2 (e1 + e2 + e3) - {e1, e2, e3}[[i]]), {i, 3}]]]],
+  check["T_th, B", "T_th = B = B^T = 0 at this order", zeroQ[{bl["T_th"], bl["B"], bl["Bt"]}]]}]
+::Text::
+**Why $\mathbf{T}_{\rm th}$ and $\mathbf{B}$ vanish exactly.** Under inversion through the centre ($\boldsymbol{r} \to -\boldsymbol{r}$), forces and velocities (polar vectors) change sign but torques and angular velocities (axial vectors) do not. A body that is its own inversion image can therefore have no polar-to-axial coupling: $\mathbf{T}_{\rm th}$ (torque per gradient) and $\mathbf{B}$ (force per angular velocity) must vanish identically. The next check confirms this with the full numerical quadrature of the exact ellipsoid at finite $\varepsilon$. It also compares the quadrature with the first-order formulas at small $\varepsilon$, where the error should shrink like $\varepsilon^2$.
+::Code::
+Module[{bn = pt["blocks"], sym1, err},
+ sym1[e_] := Module[{p = makeParticle[Function[nn, Rellipsoid[nn] /. {eps -> e, e1 -> 1, e2 -> 0, e3 -> -1}], ell, rhoP, gas], s},
+   s = shE["blocks"] /. {a -> 1, eps -> e, e1 -> 1, e2 -> 0, e3 -> -1};
+   Max[Norm[p["blocks"]["f_th"]/p["gamma0"] - s["f_th"]], Norm[p["blocks"]["f_drag"]/p["xi0"] - s["f_drag"]], Norm[p["blocks"]["T_drag"]/p["c0"] - s["T_drag"]]]];
+ err = {sym1[0.01], sym1[0.02]};
+ Column[{
+   check["centrosymmetry", "exact ellipsoid (eps = 0.1): T_th and B vanish to quadrature precision",
+    Norm[bn["T_th"]]/(pt["gamma0"] ell) < 10^-12 && Norm[bn["B"]]/(pt["xi0"] ell) < 10^-12,
+    "|T_th|/(gamma0 l) = " <> sci[Norm[bn["T_th"]]/(pt["gamma0"] ell)] <> ",  |B|/(xi0 l) = " <> sci[Norm[bn["B"]]/(pt["xi0"] ell)]],
+   check["first order", "quadrature minus first-order formulas scales as eps^2", 3.5 < err[[2]]/err[[1]] < 4.5,
+    "max error " <> sci[err[[1]]] <> " at eps = 0.01 and " <> sci[err[[2]]] <> " at eps = 0.02"]}]]
+::Text::
+The numbers for the default particle ($\ell = 20\,\mu$m, $\rho_p = 1$ g/cm³, air at 5 Torr and 300 K, $a = 1$), from the exact quadrature:
+::Code::
+Grid[{{"gamma0 (N m)", ScientificForm[pt["gamma0"], 4], "f_th/gamma0", tf[Round[pt["blocks"]["f_th"]/pt["gamma0"], 10.^-4]]},
+  {"xi0 (N s/m)", ScientificForm[pt["xi0"], 4], "f_drag/xi0", tf[Round[pt["blocks"]["f_drag"]/pt["xi0"], 10.^-4]]},
+  {"c0 (N m s)", ScientificForm[pt["c0"], 4], "T_drag/c0", tf[Round[pt["blocks"]["T_drag"]/pt["c0"], 10.^-4]]},
+  {"M (kg)", ScientificForm[pt["M"], 4], "T_th", "0"},
+  {"M/xi0 (ms)", num[1000 pt["M"]/pt["xi0"]], "I_zz/c0 (ms)", num[1000 pt["I"][[3, 3]]/pt["c0"]]}}, Frame -> All, Alignment -> Left]
+::Section::
+5. Steady states: neutral orientation and gliding
+::Text::
+**Rotation.** A steady spin $\boldsymbol{\omega} = \Omega\boldsymbol{u}$ about the vertical needs a real, non-zero eigenvalue of $\mathbf{T}_{\rm drag}^{-1}\mathbf{T}_{\rm th}$ (notes Sec. 2.2). Here $\mathbf{T}_{\rm th} = 0$, so the only rotational motion is the decay of any initial spin, and **every orientation is an equilibrium**. Nothing selects an orientation.
+::Text::
+**Translation.** Let $\boldsymbol{u}$ be the lab vertical expressed in the body frame. At rest the body-frame force balance is $\mathbf{f}_{\rm drag}\boldsymbol{v} = G\mathbf{f}_{\rm th}\boldsymbol{u} - Mg\boldsymbol{u}$. Levitation fixes $G$ by $\boldsymbol{u}\cdot\boldsymbol{v} = 0$, and the horizontal velocity that remains is a glide. To first order in $\varepsilon$ only the anisotropy of $\mathbf{f}_{\rm th}$ enters (notes Eq. 43); the drag anisotropy is multiplied by $\gamma_0G - Mg = O(\varepsilon)$:
+::BoxMath::
+\boldsymbol{v}_\perp = \frac{Mg}{\xi_0}\,\big[(\mathbf{f}_{\rm th}/\gamma_0 - \mathbf{I})\,\boldsymbol{u}\big]_\perp = -\frac{2(4 - 3a)}{5}\,\varepsilon\,\frac{Mg}{\xi_0}\,\big[{\rm diag}(e_i)\,\boldsymbol{u}\big]_\perp , \qquad |\boldsymbol{v}_\perp| = \frac{4 - 3a}{5}\,\varepsilon\,|e_1 - e_3|\,|\sin2\theta|\,\frac{Mg}{\xi_0}
+::Text::
+The second form is for a tilt $\theta$ of the vertical within the $x$–$z$ plane, $\boldsymbol{u} = (\sin\theta, 0, \cos\theta)$. The glide is fastest at 45° between the longest and shortest axes and vanishes when a principal axis is vertical. The exact glide is computed below from the quadrature tensors for every orientation (`hoverDrift`), and compared with the formula.
+::Code::
+glideLO[th_] := (4 - 3 gas["a"])/5 (1/10) Abs[1 - (-1)] Abs[Sin[2 th]] pt["M"] $gEarth/pt["xi0"];
+glideExact[th_] := hoverDrift[pt, {Sin[th], 0, Cos[th]}]["speed"];
+Column[{
+  Plot[{1000 glideExact[th Degree], 1000 glideLO[th Degree]}, {th, 0, 180}, PlotStyle -> {Thick, Dashed}, Frame -> True,
+   FrameLabel -> {"tilt of the vertical from the body z axis, in the x-z plane (deg)", "glide speed (mm/s)"},
+   PlotLegends -> {"exact quadrature tensors", "first-order formula"}, ImageSize -> 480, PlotLabel -> "glide speed at levitation"],
+  check["glide", "at 45 deg the glide speed matches the first-order formula to O(eps)", Abs[glideExact[45 Degree]/glideLO[45 Degree] - 1] < 0.15,
+   "exact " <> num[1000 glideExact[45 Degree]] <> " mm/s, first order " <> num[1000 glideLO[45 Degree]] <> " mm/s"],
+  check["no torque", "a gliding ellipsoid feels no torque at any orientation", Max[Table[Norm[hoverDrift[pt, {Sin[t] Cos[p], Sin[t] Sin[p], Cos[t]}]["torque"]], {t, 0.1, 3, 0.4}, {p, 0, 6, 0.7}]] < 10^-12 pt["gamma0"] ell pt["G0"]]}]
+::Text::
+Over all orientations the glide speed forms a map on the sphere of directions $\boldsymbol{u}$. It vanishes at the six principal directions and peaks midway between the longest and shortest axes.
+::Code::
+ListDensityPlot[Flatten[Table[{p, t, 1000 hoverDrift[pt, {Sin[t Degree] Cos[p Degree], Sin[t Degree] Sin[p Degree], Cos[t Degree]}]["speed"]}, {t, 0, 180, 4}, {p, 0, 360, 6}], 1],
+ ColorFunction -> "SunsetColors", PlotLegends -> Automatic, FrameLabel -> {"azimuth of u (deg)", "polar angle of u from z (deg)"}, ImageSize -> 480,
+ PlotLabel -> "glide speed (mm/s) versus the vertical direction u in body axes", AspectRatio -> 1/2]
+::Section::
+6. Simulated trajectories
+::Text::
+The simulator integrates the full nonlinear rigid-body equations with the complete $6\times9$ response, gravity at the CoM, and the uniform gradient (no trap). The first run starts at rest with the vertical at 45° in the $x$–$z$ plane, at that orientation's levitation gradient. The second run starts at the same orientation with a 400 rad/s spin about the vertical. The spin decays within a few milliseconds. It leaves the particle turned about the vertical by about 100°, and also re-tilted a little, because the anisotropic rotational drag couples the spin into the tilt. The particle then keeps this orientation, and the glide direction turns with it: the orientation is neutral.
+::Code::
+u45 = {Sin[45 Degree], 0, Cos[45 Degree]}; hd45 = hoverDrift[pt, u45];
+run1 = simulate[pt, hd45["G"], qFromTo[u45, {0, 0, 1}], {0, 0, 0}, 1.];
+run2 = simulate[pt, hd45["G"], qFromTo[u45, {0, 0, 1}], 400 u45, 1.];
+uLab[st_] := Transpose[quatR[st[[7 ;; 10]]]].{0, 0, 1};
+Module[{ts = Subdivide[0., 1., 400], s1, s2},
+ s1 = run1["state"] /@ ts; s2 = run2["state"] /@ ts;
+ Column[{
+   Row[{ListLinePlot[{10^6 s1[[All, 1 ;; 2]], 10^6 s2[[All, 1 ;; 2]]}, AspectRatio -> Automatic, Frame -> True, FrameLabel -> {"X (um)", "Y (um)"},
+      PlotLegends -> Placed[{"from rest", "with initial spin about Z"}, Below], PlotLabel -> "top view, 1 s", ImageSize -> 330, PlotRange -> All, Axes -> False],
+     ListLinePlot[{Transpose[{1000 ts, 10^6 s1[[All, 3]]}], Transpose[{1000 ts, 10^6 s2[[All, 3]]}]}, Frame -> True, FrameLabel -> {"t (ms)", "Z (um)"},
+      PlotLabel -> "height", ImageSize -> 330, PlotRange -> All]}],
+   check["straight line", "run 1: orientation constant and the CoM glides in a straight line at the predicted velocity",
+    Norm[uLab[s1[[-1]]] - u45] < 10^-6 && Norm[s1[[-1, 4 ;; 6]] - quatR[s1[[-1, 7 ;; 10]]].hd45["v_body"]] < 10^-6 Norm[hd45["v_body"]],
+    "glide speed " <> num[1000 Norm[s1[[-1, 4 ;; 5]]]] <> " mm/s (predicted " <> num[1000 hd45["speed"]] <> " mm/s), vertical velocity " <> sci[s1[[-1, 6]]] <> " m/s"],
+   check["neutral", "run 2: the spin decays and leaves the body in a new orientation that it keeps; the glide direction turns with it",
+    Norm[s2[[-1, 11 ;; 13]]] < 10^-6 && VectorAngle[s1[[-1, 4 ;; 5]], s2[[-1, 4 ;; 5]]]/Degree > 20 &&
+     Norm[uLab[s2[[-1]]] - uLab[run2["state"][0.5]]] < 10^-8,
+    "glide direction turned by " <> num[VectorAngle[s1[[-1, 4 ;; 5]], s2[[-1, 4 ;; 5]]]/Degree] <> " deg; tilt changed by " <>
+     num[VectorAngle[uLab[s2[[-1]]], u45]/Degree] <> " deg (T_drag is anisotropic); speed " <> num[1000 Norm[s2[[-1, 4 ;; 5]]]] <> " mm/s; final |omega| = " <> sci[Norm[s2[[-1, 11 ;; 13]]]] <> " rad/s"]}]]
+::Text::
+Run 1 stays at constant height. In run 2 the spin also nudges the tilt slightly (the rotational drag is anisotropic), so the levitation gradient no longer matches exactly and the particle drifts slowly in height; a trap would hold it. The animation shows run 1: the body keeps its orientation and slides sideways (toward $-X$). The body is drawn 3 times larger than the displacement scale, and the grey line is the CoM path.
+::Code::
+With[{mesh = bodyMesh[Rnum], states = Table[run1["state"][t], {t, 0., 1., 0.01}]},
+ Manipulate[Module[{st = states[[k]], x},
+   x = 10^6 st[[1 ;; 3]];
+   Graphics3D[{drawBody[mesh, x, quatR[st[[7 ;; 10]]], 60], If[k > 1, {Gray, Thick, Line[10^6 states[[1 ;; k, 1 ;; 3]]]}, Nothing]},
+    PlotRange -> {{-1700, 150}, {-150, 150}, {-150, 150}}, BoxRatios -> {5, 1, 1}, Lighting -> "Neutral", Axes -> True, AxesLabel -> {"X (um)", "Y", "Z"},
+    PlotLabel -> Row[{"t = ", 10 (k - 1), " ms"}], ImageSize -> 600]],
+  {{k, 1, "frame (10 ms steps)"}, 1, 101, 1, ControlType -> Animator, AnimationRunning -> False}, SaveDefinitions -> True]]
+::Section::
+7. Orbital radius and period
+::Text::
+**Not applicable.** The ellipsoid has no thermophoretic torque, so it has no steady spin ($\Omega = 0$). Its levitated motion is a straight-line glide (or a hover when a principal axis is vertical). The orbital radius is infinite and there is no orbital period. The glide direction is fixed by whatever orientation the particle happens to have.
+::Section::
+8. Summary
+::Code::
+Column[{Row[{"checks: ", Length[$verifications], "  (", Count[$verifications[[All, 3]], "VERIFIED"], " verified)"}],
+  Grid[Prepend[$verifications[[All, 1 ;; 3]], Style[#, Bold] & /@ {"item", "statement", "result"}], Frame -> All, Alignment -> Left, Background -> {None, {LightGray}}]}]
+::Item::
+- **Shape.** `Rellipsoid[{x_, y_, z_}] := 1/Sqrt[x^2/a1^2 + y^2/a2^2 + z^2/a3^2]` with $a_i = 1 + \varepsilon e_i$; defaults $\varepsilon = 0.1$, $e = (1, 0, -1)$.
+- **Tensors.** $\mathbf{f}_{\rm th}$, $\mathbf{f}_{\rm drag}$ and $\mathbf{T}_{\rm drag}$ are diagonal in the principal axes, with the $O(\varepsilon)$ forms of Section 4. $\mathbf{T}_{\rm th} = \mathbf{B} = 0$ exactly, because the body is centrosymmetric.
+- **Motion.** There is no torque, so the orientation is neutral and any spin decays. At levitation a tilted ellipsoid glides in a straight line at up to 1.5 mm/s for the defaults, fastest when the vertical lies midway between the longest and shortest axes.
+- **Orbit.** None: $R = \infty$, no period. An ellipsoid is achiral, and more strongly it is centrosymmetric, so it cannot turn a vertical gradient into a torque. Shape 2 adds a CoM offset, and Shape 3 adds odd harmonics.

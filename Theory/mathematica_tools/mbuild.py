@@ -20,9 +20,10 @@ NAMED = {
     'nabla': '∇', 'partial': '∂', 'times': '×', 'cdot': '·', 'otimes': '⊗', 'le': '≤', 'ge': '≥', 'leq': '≤', 'geq': '≥',
     'approx': '≈', 'to': '→', 'infty': '∞', 'pm': '±', 'sum': '∑', 'int': '∫', 'propto': '∝', 'll': '≪', 'gg': '≫',
     'neq': '≠', 'ne': '≠', 'parallel': '∥', 'perp': '⊥', 'equiv': '≡', 'Rightarrow': '⇒', 'in': '∈', 'langle': '〈',
-    'rangle': '〉', 'ldots': '…', 'cdots': '⋯', 'dots': '…', 'ell': 'ℓ', 'circ': '°', 'sim': '∼', 'simeq': '≃',
+    'rangle': '〉', 'ldots': '…', 'cdots': '⋯', 'dots': '…', 'ell': 'l', 'circ': '°', 'sim': '∼', 'simeq': '≃',
     'lesssim': '≲', 'gtrsim': '≳', 'leftarrow': '←', 'leftrightarrow': '↔', 'mapsto': '↦',
     'quad': '\u2003', 'qquad': '\u2003\u2003', ',': '\u2009', ';': '\u2005', '!': '', '{': '{', '}': '}', '|': '‖',
+    ' ': '\u2005', 'oint': '∮', 'Big': '', 'big': '', 'Bigg': '', 'bigg': '', 'lvert': '|', 'rvert': '|',
     'top': '\x01Transpose\x02', 'T': '\x01Transpose\x02', 'one': '\x01DoubleStruckOne\x02',
 }
 FUNCS = {'ln', 'exp', 'log', 'sin', 'cos', 'tan', 'arccos', 'arcsin', 'arctan', 'det', 'tr', 'max', 'min', 'Re', 'Im', 'diag'}
@@ -88,7 +89,7 @@ class TeX:
         c = self.peek()
         if c == '\\':
             self.i += 1
-            m = re.match(r'[A-Za-z]+|[,;!{}|]', self.s[self.i:])
+            m = re.match(r'[A-Za-z]+|[,;!{}| ]', self.s[self.i:])
             if not m: raise ValueError('bad escape in ' + self.s)
             name = m.group(0); self.i += len(name)
             if name in ('left', 'right', 'big', 'Big', 'bigl', 'bigr', 'Bigl', 'Bigr'): return '""'
